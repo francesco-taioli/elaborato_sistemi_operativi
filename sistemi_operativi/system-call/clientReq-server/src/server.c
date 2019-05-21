@@ -38,13 +38,14 @@ void closeFIFOandTerminate(){
     _exit(0);
 };
 
-int hash(struct Request *request){
+char * hash(struct Request *request, char * result){
     //todo implement
     //return 1234 * request->clientPid;
-    return 12349;
+    strcpy(result, "hashfasul");
+    return result;
 };
 
-void sendResponse(struct Request *request) {
+void sendResponse(struct Request *request, char hash[10]) {
 
     // get the extended path for the fifo ( base path + pid )
     char pathToClientFIFO [25];
@@ -59,7 +60,7 @@ void sendResponse(struct Request *request) {
 
     // Prepare the response for the client
     struct Response response;
-    response.key = hash(request);
+    strcpy(response.key , hash);//todo check
 
 
     // write the response into the client fifo
@@ -130,7 +131,7 @@ int main (int argc, char *argv[]) {
 
     // generate key with ftok todo implement fotk
     // key_t key = ftok("../inc/errExit.h", 'z');
-    key_t shmKey = 6327;// todo implement fotk
+    key_t shmKey = 6322;// todo implement fotk
     // if (key == -1)
      //   errExit("ftok failed");
 
@@ -176,26 +177,20 @@ int main (int argc, char *argv[]) {
                 semOp(semid, MUTEX, -1);
 
                 struct SHMKeyData shmKeyData;
-                strcpy( shmKeyData.userIdentifier ,"aasfa");
-                shmKeyData.key = 12349;
+                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
+                //create hash
+                char hashArray[10]  = "";
+                hash(&request, hashArray);
+
+                strcpy(shmKeyData.key , hashArray);
                 shmKeyData.timeStamp = 999 * shmIndex;
                 memcpy(shmPointer + shmIndex++ , &shmKeyData, sizeof(struct SHMKeyData));
 
 
-
-                sendResponse(&request);
+                sendResponse(&request, hashArray);
                 semOp(semid, MUTEX, 1);
-                //provo a leggere -remove
-                //semOp(semid, MUTEX, -1);
-                //struct SHMKeyData tmp;
-                //memcpy(&tmp, shmPointer, sizeof(struct SHMKeyData));
-                //printf("%s %d", tmp.userName, tmp.key);
-                //fflush(stdout);
-                //semOp(semid, MUTEX, 1);
 
                 }
-
-
 
         } while (bR != -1);
 

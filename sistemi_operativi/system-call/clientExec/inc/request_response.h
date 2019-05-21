@@ -4,18 +4,18 @@
 #include <sys/types.h>
 struct Request {   /* Request (client --> server) */
     pid_t clientPid;
-    char *serviceName;      /* Stampa, Salva o Invia*/
-    char *userIdentifier;
+    char serviceName[6];      /* Stampa, Salva o Invia*/
+    char userIdentifier[25];
 };
 
 struct Response {  /* Response (server --> client) */
-    int key;
+    char key[10];
 };
 
 // the data that will fit into shared memory
 struct SHMKeyData {
     char userIdentifier[25];
-    int key;
+    char key[10];
     int timeStamp;
 };
 

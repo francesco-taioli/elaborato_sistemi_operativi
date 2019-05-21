@@ -20,12 +20,12 @@
 #define MUTEX 0
 
 int main (int argc, char *argv[]) {
-    char *userName = "aasfa";
-    int key = 12349;
+    char *userName = "userPROVA";
+    char *key = "hashfasul";
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
-    key_t shmKey = 6327;// todo implement fotk
+    key_t shmKey = 6322;// todo implement fotk
 
     // allocate a shared memory segment
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
@@ -48,17 +48,17 @@ int main (int argc, char *argv[]) {
 
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-            printf("U->%s t->%d key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+            printf("U->%s t->%d key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
 
             if( strcmp(tmp.userIdentifier, userName) == 0)
-               if(tmp.key == key)
+               if(strcmp(tmp.key, key) == 0)
                {
                    //execute the program and set the key to negative value
                    keyIsValid = 1;
 
                    //set the key to negativo, so it become invalid
-                   tmp.key = -1;
+                   strcpy(tmp.key, "-1");
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 
                }

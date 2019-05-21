@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -49,8 +50,8 @@ int main (int argc, char *argv[]) {
     // prepare a request
     struct Request request;
     request.clientPid = getpid();
-    request.serviceName = serviceName;
-    request.userIdentifier = userIdentifier;
+    strcpy(request.serviceName , serviceName);
+    strcpy(request.userIdentifier , userIdentifier);
 
     // send the request through server fifo
     if (write(serverFIFO, &request, sizeof(struct Request)) //todo rileggi  sizeof(struct Request)!= sizeof(struct Request))
@@ -71,7 +72,7 @@ int main (int argc, char *argv[]) {
 
     printf("codice identificativo: %s\n", userIdentifier);
     printf("servizio: %s\n", serviceName);
-    printf("chiave rilasciata del server: %d\n", response.key);
+    printf("chiave rilasciata del server: %s\n", response.key);
 
     //register closeFIFOs() as pre-exit function
     atexit(closeFIFOs);
