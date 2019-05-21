@@ -50,6 +50,7 @@ int main (int argc, char *argv[]) {
     struct Request request;
     request.clientPid = getpid();
     request.serviceName = serviceName;
+    request.userIdentifier = userIdentifier;
 
     // send the request through server fifo
     if (write(serverFIFO, &request, sizeof(struct Request)) //todo rileggi  sizeof(struct Request)!= sizeof(struct Request))
