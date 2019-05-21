@@ -25,7 +25,7 @@ int main (int argc, char *argv[]) {
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
-    key_t shmKey = 156998;// todo implement fotk
+    key_t shmKey = 6327;// todo implement fotk
 
     // allocate a shared memory segment
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
@@ -43,14 +43,12 @@ int main (int argc, char *argv[]) {
         //retrieve data
         semOp(semid, MUTEX, -1);
         struct SHMKeyData tmp;
-        struct SHMKeyData keyData[MAX_REQUEST_INTO_MEMORY];
-
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
 
 
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-            printf("%s %d %d", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+            printf("U->%s t->%d key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
 
             if( strcmp(tmp.userIdentifier, userName) == 0)

@@ -97,6 +97,7 @@ int createSemaphoreSet(key_t semkey) {
 
 
 int main (int argc, char *argv[]) {
+    int shmIndex = 0; // index for access to the shm
     sigset_t mySet, prevSet;
     // initialize mySet to contain all signals
     sigfillset(&mySet);
@@ -129,7 +130,7 @@ int main (int argc, char *argv[]) {
 
     // generate key with ftok todo implement fotk
     // key_t key = ftok("../inc/errExit.h", 'z');
-    key_t shmKey = 156998;// todo implement fotk
+    key_t shmKey = 6327;// todo implement fotk
     // if (key == -1)
      //   errExit("ftok failed");
 
@@ -138,7 +139,6 @@ int main (int argc, char *argv[]) {
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
 
     // attach the shared memory segment
-    struct SHMKeyData shmKeyData[MAX_REQUEST_INTO_MEMORY];
     struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
 
 
@@ -174,14 +174,15 @@ int main (int argc, char *argv[]) {
                 printf("sto inserendo i dati");
                 fflush(stdout);
                 semOp(semid, MUTEX, -1);
-                for(int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++){
-                    strcpy( shmKeyData[i].userIdentifier ,"aasfa");
-                    shmKeyData[i].key = 12349;
-                    shmKeyData[i].timeStamp = 999* i;
-                    memcpy(shmPointer + i , &shmKeyData[i], sizeof(struct SHMKeyData));
+
+                struct SHMKeyData shmKeyData;
+                strcpy( shmKeyData.userIdentifier ,"aasfa");
+                shmKeyData.key = 12349;
+                shmKeyData.timeStamp = 999 * shmIndex;
+                memcpy(shmPointer + shmIndex++ , &shmKeyData, sizeof(struct SHMKeyData));
 
 
-                }
+
                 sendResponse(&request);
                 semOp(semid, MUTEX, 1);
                 //provo a leggere -remove
