@@ -20,12 +20,12 @@
 #define MUTEX 0
 
 int main (int argc, char *argv[]) {
-    char *userName = "userPROVA";
+    char *userName = "userPROV";
     char *key = "hashfasul";
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
-    key_t shmKey = 6322;// todo implement fotk
+    key_t shmKey = 7896;// todo implement fotk
 
     // allocate a shared memory segment
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
@@ -35,7 +35,7 @@ int main (int argc, char *argv[]) {
 
 
     // get the semaphore set
-    key_t semKey = 6347; //todo implement in some way
+    key_t semKey = 3333; //todo implement in some way
     int semid = semget(semKey, 1, S_IRUSR | S_IWUSR);
 
     if (semid > 0) {
@@ -48,7 +48,7 @@ int main (int argc, char *argv[]) {
 
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-            printf("U->%s t->%d key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+            printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
 
             if( strcmp(tmp.userIdentifier, userName) == 0)
@@ -57,7 +57,7 @@ int main (int argc, char *argv[]) {
                    //execute the program and set the key to negative value
                    keyIsValid = 1;
 
-                   //set the key to negativo, so it become invalid
+                   //set the key to negativ value , so it become invalid
                    strcpy(tmp.key, "-1");
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 

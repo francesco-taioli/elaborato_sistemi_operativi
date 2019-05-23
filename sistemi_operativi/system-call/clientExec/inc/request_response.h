@@ -16,7 +16,7 @@ struct Response {  /* Response (server --> client) */
 struct SHMKeyData {
     char userIdentifier[25];
     char key[10];
-    int timeStamp;
+    time_t timeStamp;
 };
 
 #endif

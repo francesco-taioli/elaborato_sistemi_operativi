@@ -9,6 +9,7 @@
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <string.h>
+#include <time.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -20,7 +21,7 @@
 
 char *pathToServerFIFO = "/tmp/fifo_server";
 char *basePathToClientFIFO = "/tmp/fifo_client."; // to handle multiple process
-int serverFIFO, serverFIFO_extra;
+int serverFIFO, serverFIFO_extra, semid;
 
 void closeFIFOandTerminate(){
     // Close the FIFO
@@ -33,6 +34,11 @@ void closeFIFOandTerminate(){
     // Remove the FIFO
     if (unlink(pathToServerFIFO) != 0)
         errExit("unlink server fifo -> failed");
+
+    // remove the created semaphore set
+    printf("<Client> removing the semaphore set...\n");
+    if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
+        errExit("semctl IPC_RMID failed");
 
     // terminate the process
     _exit(0);
@@ -85,7 +91,6 @@ int createSemaphoreSet(key_t semkey) {
         errExit("semget failed");
 
     // Initialize the semaphore set
-    // Initialize the semaphore set
     union semun arg;
     arg.val = 1;
 
@@ -98,7 +103,7 @@ int createSemaphoreSet(key_t semkey) {
 
 
 int main (int argc, char *argv[]) {
-    int shmIndex = 0; // index for access to the shm
+    int offset = 0; // index for access to the shm
     sigset_t mySet, prevSet;
     // initialize mySet to contain all signals
     sigfillset(&mySet);
@@ -131,7 +136,7 @@ int main (int argc, char *argv[]) {
 
     // generate key with ftok todo implement fotk
     // key_t key = ftok("../inc/errExit.h", 'z');
-    key_t shmKey = 6322;// todo implement fotk
+    key_t shmKey = 7896;// todo implement fotk
     // if (key == -1)
      //   errExit("ftok failed");
 
@@ -141,11 +146,11 @@ int main (int argc, char *argv[]) {
 
     // attach the shared memory segment
     struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
-
+    struct SHMKeyData *baseShmPointer = shmPointer; // baseShmPointer for memmory
 
     // create a semaphore set
-    key_t semKey = 6347; //todo implement in som e way
-    int semid = createSemaphoreSet(semKey);
+    key_t semKey = 3333; //todo implement in som e way
+    semid = createSemaphoreSet(semKey);
 
 
     //create keyMananger
@@ -153,12 +158,34 @@ int main (int argc, char *argv[]) {
     if(pid == 0)
     {
         // keyamanger code
+        while(1){
+            sleep(30);
+
+            semOp(semid, MUTEX, -1);
+            struct SHMKeyData tmp;
+            struct SHMKeyData *tmpOffset = shmPointer;
+            for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+                memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
+
+                printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+
+                if(tmp.timeStamp == 0)break;
+                if(time(0) - tmp.timeStamp > 60 * 1)
+                {
+                    // make the key invalid
+                    strcpy(tmp.key, "-1");
+                    memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
+                    printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
+                }
+            }
+
+            semOp(semid, MUTEX, 1);
+        }
 
     }
     else if(pid > 0)
     {
         //parent code
-
         struct Request request;
         int bR = -1;                                                                //todo buffer -1 why?
         do{
@@ -178,13 +205,14 @@ int main (int argc, char *argv[]) {
 
                 struct SHMKeyData shmKeyData;
                 strcpy( shmKeyData.userIdentifier , request.userIdentifier);
+
                 //create hash
                 char hashArray[10]  = "";
                 hash(&request, hashArray);
-
                 strcpy(shmKeyData.key , hashArray);
-                shmKeyData.timeStamp = 999 * shmIndex;
-                memcpy(shmPointer + shmIndex++ , &shmKeyData, sizeof(struct SHMKeyData));
+
+                shmKeyData.timeStamp = time(0);
+                memcpy(baseShmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
 
 
                 sendResponse(&request, hashArray);
