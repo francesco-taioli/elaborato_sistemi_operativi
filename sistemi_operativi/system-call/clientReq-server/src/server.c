@@ -21,6 +21,7 @@
 
 char *pathToServerFIFO = "/tmp/fifo_server";
 char *basePathToClientFIFO = "/tmp/fifo_client."; // to handle multiple process
+char *pathKeyFtok = "/tmp/vr422009.tmp";
 int serverFIFO, serverFIFO_extra, semid;
 
 void closeFIFOandTerminate(){
@@ -34,6 +35,11 @@ void closeFIFOandTerminate(){
     // Remove the FIFO
     if (unlink(pathToServerFIFO) != 0)
         errExit("unlink server fifo -> failed");
+
+    //remove the ftok file
+    // Remove the FIFO
+    if (unlink(pathKeyFtok) != 0)
+        errExit("unlink pathKeyFtok  -> failed");
 
     // remove the created semaphore set
     printf("<Client> removing the semaphore set...\n");
@@ -98,6 +104,14 @@ int createSemaphoreSet(key_t semkey) {
         errExit("semctl SETALL failed");
 
     return semid;
+};
+
+void createFileForKeyManagement(){
+    int fd = open(pathKeyFtok, O_WRONLY | O_CREAT , S_IRWXU |S_IRWXG | S_IRWXO  );
+    if (fd == -1)
+        errExit("open file ftok -> failed");
+
+    close(fd);
 }
 
 
@@ -115,7 +129,7 @@ int main (int argc, char *argv[]) {
     if (signal(SIGTERM, closeFIFOandTerminate) == SIG_ERR)
        errExit("change signal handler failed");
 
-    printf("%d", getpid());
+    printf("%d\n", getpid());
     fflush(stdout);
 
     //todo giusto che crashi quando  il file è gia statp creato
@@ -134,24 +148,26 @@ int main (int argc, char *argv[]) {
     if (serverFIFO_extra == -1)
         errExit("open write-only failed");
 
-    // generate key with ftok todo implement fotk
-    // key_t key = ftok("../inc/errExit.h", 'z');
-    key_t shmKey = 7896;// todo implement fotk
-    // if (key == -1)
-     //   errExit("ftok failed");
+    // create file for ftok
+    createFileForKeyManagement();
 
+    // generate key with ftok
+    key_t shmKey = ftok(pathKeyFtok, 'z');
+    if (shmKey == -1)
+        errExit("ftok for shmKey failed");
 
     // allocate a shared memory segment
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
 
     // attach the shared memory segment
     struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
-    struct SHMKeyData *baseShmPointer = shmPointer; // baseShmPointer for memmory
 
     // create a semaphore set
-    key_t semKey = 3333; //todo implement in som e way
-    semid = createSemaphoreSet(semKey);
+    key_t semKey = ftok(pathKeyFtok, 'g');
+    if (semKey == -1)
+        errExit("ftok for semKey failed");
 
+    semid = createSemaphoreSet(semKey);
 
     //create keyMananger
     pid_t pid = fork();
@@ -175,7 +191,7 @@ int main (int argc, char *argv[]) {
                     // make the key invalid
                     strcpy(tmp.key, "-1");
                     memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
-                    printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
+                    //printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
                 }
             }
 
@@ -199,7 +215,7 @@ int main (int argc, char *argv[]) {
                 printf("<Server> it looks like I did not receive a valid request\n");
             else {
 
-                printf("sto inserendo i dati");
+                printf("sto inserendo i dati..\n");
                 fflush(stdout);
                 semOp(semid, MUTEX, -1);
 
@@ -212,7 +228,7 @@ int main (int argc, char *argv[]) {
                 strcpy(shmKeyData.key , hashArray);
 
                 shmKeyData.timeStamp = time(0);
-                memcpy(baseShmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
+                memcpy(shmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
 
 
                 sendResponse(&request, hashArray);

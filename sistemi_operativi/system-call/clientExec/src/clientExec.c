@@ -19,13 +19,17 @@
 #define MAX_REQUEST_INTO_MEMORY 5
 #define MUTEX 0
 
+char *pathKeyFtok = "/tmp/vr422009.tmp";
+
 int main (int argc, char *argv[]) {
-    char *userName = "userPROV";
+    char *userName = "userPROVA";
     char *key = "hashfasul";
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
-    key_t shmKey = 7896;// todo implement fotk
+    key_t shmKey = ftok(pathKeyFtok, 'z');
+    if (shmKey == -1)
+        errExit("ftok for shmKey failed");
 
     // allocate a shared memory segment
     int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
@@ -34,8 +38,12 @@ int main (int argc, char *argv[]) {
     struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
 
 
+    // create a semaphore set
+    key_t semKey = ftok(pathKeyFtok, 'g');
+    if (semKey == -1)
+        errExit("ftok for semKey failed");
+
     // get the semaphore set
-    key_t semKey = 3333; //todo implement in some way
     int semid = semget(semKey, 1, S_IRUSR | S_IWUSR);
 
     if (semid > 0) {
@@ -44,12 +52,9 @@ int main (int argc, char *argv[]) {
         semOp(semid, MUTEX, -1);
         struct SHMKeyData tmp;
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
-
-
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
             printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
-
 
             if( strcmp(tmp.userIdentifier, userName) == 0)
                if(strcmp(tmp.key, key) == 0)
@@ -57,7 +62,7 @@ int main (int argc, char *argv[]) {
                    //execute the program and set the key to negative value
                    keyIsValid = 1;
 
-                   //set the key to negativ value , so it become invalid
+                   //set the key to a negative value , so it become invalid
                    strcpy(tmp.key, "-1");
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 
