@@ -22,17 +22,22 @@
 char *pathToServerFIFO = "/tmp/fifo_server";
 char *basePathToClientFIFO = "/tmp/fifo_client."; // to handle multiple process
 char *pathKeyFtok = "/tmp/vr422009.tmp";
-int serverFIFO, serverFIFO_extra, semid;
+
+int serverFIFO, serverFIFO_extra, semid, shmidServer;
+struct SHMKeyData *shmPointer;
 
 void closeFIFOandTerminate(){
+    printf("------------------\n");
+    fflush(stdout);
     // Close the FIFO
     if (serverFIFO != 0 && close(serverFIFO) == -1)
         errExit("close server fifo -> failed");
 
-    if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1) //todo why?
+    if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1) //todo why? unlink server fifo
         errExit("close failed");
 
     // Remove the FIFO
+    printf("<Server> removing server  FIFO...\n");
     if (unlink(pathToServerFIFO) != 0)
         errExit("unlink server fifo -> failed");
 
@@ -42,9 +47,17 @@ void closeFIFOandTerminate(){
         errExit("unlink pathKeyFtok  -> failed");
 
     // remove the created semaphore set
-    printf("<Client> removing the semaphore set...\n");
+    printf("<Server> removing the semaphore set...\n");
     if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
         errExit("semctl IPC_RMID failed");
+
+    // detach the shared memory segment
+    printf("\n<Server> detaching the shared memory segment...\n");
+    free_shared_memory(shmPointer);
+
+    // remove the shared memory segment
+    printf("<Server> removing the shared memory segment...\n");
+    remove_shared_memory(shmidServer);
 
     // terminate the process
     _exit(0);
@@ -157,10 +170,10 @@ int main (int argc, char *argv[]) {
         errExit("ftok for shmKey failed");
 
     // allocate a shared memory segment
-    int shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
+    shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
 
     // attach the shared memory segment
-    struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
+    shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
 
     // create a semaphore set
     key_t semKey = ftok(pathKeyFtok, 'g');
