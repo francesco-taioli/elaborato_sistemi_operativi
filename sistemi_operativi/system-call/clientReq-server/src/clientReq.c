@@ -26,8 +26,8 @@ void closeFIFOs(){
 }
 int main (int argc, char *argv[]) {
 
-    char *userIdentifier = "userPROVA";
-    char *serviceName = "Stampa";
+    char *userIdentifier = "FRANCESC";
+    char *serviceName = "stampa";
 
     printf("Benvenuto in clientReq!\n");
     printf("digita uno fra i sequenti servizi\n\tStampa, Salva e invia\n\n");
@@ -50,8 +50,9 @@ int main (int argc, char *argv[]) {
     // prepare a request
     struct Request request;
     request.clientPid = getpid();
-    strcpy(request.serviceName , serviceName);
     strcpy(request.userIdentifier , userIdentifier);
+    strcpy(request.serviceName , serviceName);
+
 
     // send the request through server fifo
     if (write(serverFIFO, &request, sizeof(struct Request)) //todo rileggi  sizeof(struct Request)!= sizeof(struct Request))

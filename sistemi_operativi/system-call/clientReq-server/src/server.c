@@ -144,6 +144,9 @@ int main (int argc, char *argv[]) {
                 printf("<Server> it looks like I did not receive a valid request\n");
             else {
 
+                printf(" SERVICE %s  USER%s \n" , request.serviceName,  request.userIdentifier);
+                fflush(stdout);
+
                 //if(offset == MAX_REQUEST_INTO_MEMORY)
                     //signalHandlerServer();
                 printf("sto inserendo i dati..\n");
@@ -154,7 +157,7 @@ int main (int argc, char *argv[]) {
                 strcpy( shmKeyData.userIdentifier , request.userIdentifier);
 
                 //create hash
-                char hashArray[10]  = "";
+                char hashArray[25]  = "";
                 hash(&request, hashArray);
                 strcpy(shmKeyData.key , hashArray);
 
@@ -227,13 +230,27 @@ void signalHandlerKeyManager(int signal){
 };
 
 char * hash(struct Request *request, char * result){
-    //todo implement
-    //return 1234 * request->clientPid;
-    strcpy(result, "hashfasul");
+
+    if(strcmp(request->serviceName, "stampa") == 0)
+        strcpy(result, "stp");
+    else if(strcmp(request->serviceName, "salva") == 0)
+        strcpy(result, "slv");
+    else if(strcmp(request->serviceName, "invia") == 0)
+        strcpy(result, "inv");
+    else strcpy(result, "undef");
+
+    int hash = 31 * request->clientPid;
+    for (int i = 0; request->userIdentifier[i] != '\0' || i < 5 ; i++)
+        hash += request->userIdentifier[i];
+
+    char tmp[25];
+    sprintf(tmp,"%d",hash);
+    strcat(result, tmp);
+
     return result;
 };
 
-void sendResponse(struct Request *request, char hash[10]) {
+void sendResponse(struct Request *request, char hash[25]) {
 
     // get the extended path for the fifo ( base path + keyManager )
     char pathToClientFIFO [25];
