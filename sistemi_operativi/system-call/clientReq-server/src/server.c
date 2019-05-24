@@ -26,9 +26,167 @@ char *pathKeyFtok = "/tmp/vr422009.tmp";
 int serverFIFO, serverFIFO_extra, semid, shmidServer;
 struct SHMKeyData *shmPointer;
 
-void closeFIFOandTerminate(){
-    printf("------------------\n");
+pid_t keyManager;
+
+void signalHandlerServer(int signal);
+void closeAndRemoveIPC();
+void signalHandlerKeyManager(int signal);
+char * hash(struct Request *request, char * result);
+void sendResponse(struct Request *request, char hash[10]);
+int createSemaphoreSet(key_t semkey);
+void createFileForKeyManagement();
+
+
+
+int main (int argc, char *argv[]) {
+    int offset = 0; // index for access to the shm
+    sigset_t mySet, prevSet;
+    // initialize mySet to contain all signals
+    sigfillset(&mySet);
+    // remove SIGTERM from mySet
+    sigdelset(&mySet, SIGTERM);
+    // blocking all signals but SIGTERM
+    sigprocmask(SIG_SETMASK, &mySet, &prevSet);
+
+    if (signal(SIGTERM, signalHandlerServer) == SIG_ERR)
+       errExit("change signal handler failed");
+
+    printf("%d\n", getpid());
     fflush(stdout);
+
+    // create file for ftok
+    createFileForKeyManagement();
+
+    // generate key with ftok
+    key_t shmKey = ftok(pathKeyFtok, 'z');
+    if (shmKey == -1)
+        errExit("ftok for shmKey failed");
+
+    // allocate a shared memory segment
+    shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
+
+    // attach the shared memory segment
+    shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
+
+    // create a semaphore set
+    key_t semKey = ftok(pathKeyFtok, 'g');
+    if (semKey == -1)
+        errExit("ftok for semKey failed");
+
+    semid = createSemaphoreSet(semKey);
+
+    //todo giusto che crashi quando  il file è gia statp creato
+    // make the server fifo -> rw- -w- ---
+    if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
+        errExit("creation of server fifo -> failed");
+
+    // wait a client req
+    serverFIFO = open(pathToServerFIFO, O_RDONLY);
+    if (serverFIFO == -1)
+        errExit("open server fifo  read-only -> failed");
+
+    // Open an extra descriptor, so that the server does not see end-of-file    todo why
+    // even if all clients closed the write end of the FIFO
+    serverFIFO_extra = open(pathToServerFIFO, O_WRONLY);
+    if (serverFIFO_extra == -1)
+        errExit("open write-only failed");
+
+
+    //create keyMananger
+    keyManager = fork();
+    if(keyManager == 0)
+    {
+        ////////// keyamanger //////////
+
+        // set signalHandler for keymanager -> sigterm
+        if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
+            errExit("keyManager unable to catch signal sigterm");
+
+
+        while(1){
+            sleep(30);
+
+            semOp(semid, MUTEX, -1);
+            struct SHMKeyData tmp;
+            struct SHMKeyData *tmpOffset = shmPointer;
+            for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+                memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
+
+                printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+
+                if(tmp.timeStamp == 0)break;
+                if(time(0) - tmp.timeStamp > 60 * 1)
+                {
+                    // make the key invalid
+                    strcpy(tmp.key, "-1");
+                    memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
+                    //printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
+                }
+            }
+
+            semOp(semid, MUTEX, 1);
+        }
+
+    }
+    else if(keyManager > 0)
+    {
+        ////////// parent  //////////
+        struct Request request;
+        int bR = -1;                                                                //todo buffer -1 why?
+        do{
+
+            bR = read(serverFIFO, &request, sizeof(struct Request));
+
+            if (bR == -1) {
+                printf("<Server> it looks like the FIFO is broken\n");
+            }
+            else if (bR != sizeof(struct Request) || bR == 0)
+                printf("<Server> it looks like I did not receive a valid request\n");
+            else {
+
+                //if(offset == MAX_REQUEST_INTO_MEMORY)
+                    //signalHandlerServer();
+                printf("sto inserendo i dati..\n");
+                fflush(stdout);
+                semOp(semid, MUTEX, -1);
+
+                struct SHMKeyData shmKeyData;
+                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
+
+                //create hash
+                char hashArray[10]  = "";
+                hash(&request, hashArray);
+                strcpy(shmKeyData.key , hashArray);
+
+                shmKeyData.timeStamp = time(0);
+                memcpy(shmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
+
+
+                sendResponse(&request, hashArray);
+                semOp(semid, MUTEX, 1);
+
+                }
+
+        } while (bR != -1);
+
+        //sigprocmask(SIG_SETMASK, &prevSet, NULL); todo serve?
+        //register closeFIFOs() as pre-exit function
+        //atexit(signalHandlerServer);
+    }
+    else{
+        //error
+        printf("  %d  error fork", keyManager);
+        closeAndRemoveIPC();
+    }
+};
+
+
+void signalHandlerServer(int signal){
+    kill(keyManager, SIGTERM);
+    closeAndRemoveIPC();
+};
+
+void closeAndRemoveIPC(){
     // Close the FIFO
     if (serverFIFO != 0 && close(serverFIFO) == -1)
         errExit("close server fifo -> failed");
@@ -61,6 +219,11 @@ void closeFIFOandTerminate(){
 
     // terminate the process
     _exit(0);
+}
+
+void signalHandlerKeyManager(int signal){
+    if(signal == 15)
+        exit(0);
 };
 
 char * hash(struct Request *request, char * result){
@@ -72,7 +235,7 @@ char * hash(struct Request *request, char * result){
 
 void sendResponse(struct Request *request, char hash[10]) {
 
-    // get the extended path for the fifo ( base path + pid )
+    // get the extended path for the fifo ( base path + keyManager )
     char pathToClientFIFO [25];
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, request->clientPid);
 
@@ -90,7 +253,7 @@ void sendResponse(struct Request *request, char hash[10]) {
 
     // write the response into the client fifo
     if (write(clientFIFO, &response,sizeof(struct Response))
-            != sizeof(struct Response)) {
+        != sizeof(struct Response)) {
         printf("<Server> write failed");
         return;
     }
@@ -98,8 +261,6 @@ void sendResponse(struct Request *request, char hash[10]) {
     // Close the FIFO
     if (close(clientFIFO) != 0)
         printf("<Server> close failed");
-
-
 };
 
 
@@ -125,144 +286,5 @@ void createFileForKeyManagement(){
         errExit("open file ftok -> failed");
 
     close(fd);
-}
+};
 
-
-
-int main (int argc, char *argv[]) {
-    int offset = 0; // index for access to the shm
-    sigset_t mySet, prevSet;
-    // initialize mySet to contain all signals
-    sigfillset(&mySet);
-    // remove SIGTERM from mySet
-    sigdelset(&mySet, SIGTERM);
-    // blocking all signals but SIGTERM
-    sigprocmask(SIG_SETMASK, &mySet, &prevSet);
-
-    if (signal(SIGTERM, closeFIFOandTerminate) == SIG_ERR)
-       errExit("change signal handler failed");
-
-    printf("%d\n", getpid());
-    fflush(stdout);
-
-    //todo giusto che crashi quando  il file è gia statp creato
-    // make the server fifo -> rw- -w- ---
-    if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
-        errExit("creation of server fifo -> failed");
-
-    // wait a client req
-    serverFIFO = open(pathToServerFIFO, O_RDONLY);
-    if (serverFIFO == -1)
-        errExit("open server fifo  read-only -> failed");
-
-    // Open an extra descriptor, so that the server does not see end-of-file    todo why
-    // even if all clients closed the write end of the FIFO
-    serverFIFO_extra = open(pathToServerFIFO, O_WRONLY);
-    if (serverFIFO_extra == -1)
-        errExit("open write-only failed");
-
-    // create file for ftok
-    createFileForKeyManagement();
-
-    // generate key with ftok
-    key_t shmKey = ftok(pathKeyFtok, 'z');
-    if (shmKey == -1)
-        errExit("ftok for shmKey failed");
-
-    // allocate a shared memory segment
-    shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
-
-    // attach the shared memory segment
-    shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
-
-    // create a semaphore set
-    key_t semKey = ftok(pathKeyFtok, 'g');
-    if (semKey == -1)
-        errExit("ftok for semKey failed");
-
-    semid = createSemaphoreSet(semKey);
-
-    //create keyMananger
-    pid_t pid = fork();
-    if(pid == 0)
-    {
-        // keyamanger code
-        while(1){
-            sleep(30);
-
-            semOp(semid, MUTEX, -1);
-            struct SHMKeyData tmp;
-            struct SHMKeyData *tmpOffset = shmPointer;
-            for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
-                memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
-
-                printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
-
-                if(tmp.timeStamp == 0)break;
-                if(time(0) - tmp.timeStamp > 60 * 1)
-                {
-                    // make the key invalid
-                    strcpy(tmp.key, "-1");
-                    memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
-                    //printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
-                }
-            }
-
-            semOp(semid, MUTEX, 1);
-        }
-
-    }
-    else if(pid > 0)
-    {
-        //parent code
-        struct Request request;
-        int bR = -1;                                                                //todo buffer -1 why?
-        do{
-
-            bR = read(serverFIFO, &request, sizeof(struct Request));
-
-            if (bR == -1) {
-                printf("<Server> it looks like the FIFO is broken\n");
-            }
-            else if (bR != sizeof(struct Request) || bR == 0)
-                printf("<Server> it looks like I did not receive a valid request\n");
-            else {
-
-                printf("sto inserendo i dati..\n");
-                fflush(stdout);
-                semOp(semid, MUTEX, -1);
-
-                struct SHMKeyData shmKeyData;
-                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
-
-                //create hash
-                char hashArray[10]  = "";
-                hash(&request, hashArray);
-                strcpy(shmKeyData.key , hashArray);
-
-                shmKeyData.timeStamp = time(0);
-                memcpy(shmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
-
-
-                sendResponse(&request, hashArray);
-                semOp(semid, MUTEX, 1);
-
-                }
-
-        } while (bR != -1);
-
-        //sigprocmask(SIG_SETMASK, &prevSet, NULL); todo serve?
-        //register closeFIFOs() as pre-exit function
-        atexit(closeFIFOandTerminate);
-    }
-    else
-        {
-        //error
-        printf("  %d  error fork", pid);
-        fflush(stdout);
-        errExit("\n somentigh goes wrong -> fork failed");
-    }
-
-    printf("sono qui11ddas\n");
-    fflush(stdout);
-}

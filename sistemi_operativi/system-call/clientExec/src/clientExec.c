@@ -86,24 +86,26 @@ int main (int argc, char *argv[]) {
 
     //todo execute program
 
-    char buffer[100];
-    printf("Inserisci [nome programma][parametri]:");
-    scanf("%99[^\n]", buffer); //Any number of characters none of them specified as characters between the brackets. = negated scanset
+//    char buffer[100];
+//    printf("Inserisci [nome programma][parametri]:");
+//    scanf("%99[^\n]", buffer); //Any number of characters none of them specified as characters between the brackets. = negated scanset
+//
+//    int i = 0;
+//    char *p = strtok (buffer, " ");
+//    char *array[100];
+//    while (p != NULL)
+//    {
+//        array[i++] = p;
+//        p = strtok (NULL, " ");
+//    }
+//    array[i] = NULL;
+//
+//
+//    printf("Eseguo %s ...\n", array[0] );
+//    execv(array[0] ,array);
 
-    int i = 0;
-    char *p = strtok (buffer, " ");
-    char *array[100];
-    while (p != NULL)
-    {
-        array[i++] = p;
-        p = strtok (NULL, " ");
-    }
-    array[i] = NULL;
-
-
-    printf("Eseguo %s ...\n", array[0] );
-
-    execv(array[0] ,array);
+    char *argvToPass[]={"stampa","Foo is my name.",NULL};
+    execv("stampa",argvToPass);
     perror("Execl");
 
 }
