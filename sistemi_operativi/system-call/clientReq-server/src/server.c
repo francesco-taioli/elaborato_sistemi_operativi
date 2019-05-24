@@ -247,6 +247,9 @@ char * hash(struct Request *request, char * result){
     sprintf(tmp,"%d",hash);
     strcat(result, tmp);
 
+
+
+    strcpy(result, "provaKey");
     return result;
 };
 

@@ -26,7 +26,7 @@ void closeFIFOs(){
 }
 int main (int argc, char *argv[]) {
 
-    char *userIdentifier = "FRANCESC";
+    char *userIdentifier = "FRANCESCo";
     char *serviceName = "stampa";
 
     printf("Benvenuto in clientReq!\n");

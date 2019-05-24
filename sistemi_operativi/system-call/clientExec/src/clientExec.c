@@ -22,8 +22,8 @@
 char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int main (int argc, char *argv[]) {
-    char *userName = "userPROVA";
-    char *key = "hashfasul";
+    char *userName = "FRANCESCo";
+    char *key = "provaKey";
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
@@ -95,6 +95,7 @@ int main (int argc, char *argv[]) {
 //    char *array[100];
 //    while (p != NULL)
 //    {
+//
 //        array[i++] = p;
 //        p = strtok (NULL, " ");
 //    }
@@ -104,8 +105,8 @@ int main (int argc, char *argv[]) {
 //    printf("Eseguo %s ...\n", array[0] );
 //    execv(array[0] ,array);
 
-    char *argvToPass[]={"stampa","Foo is my name.",NULL};
-    execv("stampa",argvToPass);
+    char *argvToPass[]={"stampa","Foo is", "prova"," my name.",NULL};
+    execv("salva",argvToPass);
     perror("Execl");
 
 }
