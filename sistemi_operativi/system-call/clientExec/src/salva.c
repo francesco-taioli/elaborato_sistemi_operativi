@@ -14,9 +14,10 @@ int main (int argc, char *argv[]) {
         errExit("error creating file");
 
     for(int i = 0; i < argc; i++){
-        //todo
-        ssize_t numWrite = write(fd, argv[i], strlen(argv[i]));
-        if (numWrite != strlen(argv[i]))
+        char buffer[50];
+        sprintf(buffer, "%s%s", argv[i], " ");
+        ssize_t numWrite = write(fd, buffer, strlen(buffer));
+        if (numWrite != strlen(buffer))
             errExit("failed to write to file");
     }
 

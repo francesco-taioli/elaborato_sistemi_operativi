@@ -95,7 +95,6 @@ int main (int argc, char *argv[]) {
 //    char *array[100];
 //    while (p != NULL)
 //    {
-//
 //        array[i++] = p;
 //        p = strtok (NULL, " ");
 //    }
@@ -105,7 +104,7 @@ int main (int argc, char *argv[]) {
 //    printf("Eseguo %s ...\n", array[0] );
 //    execv(array[0] ,array);
 
-    char *argvToPass[]={"stampa","Foo is", "prova"," my name.",NULL};
+    char *argvToPass[]={"stampa","Foois", "prova","myname.",NULL};
     execv("salva",argvToPass);
     perror("Execl");
 
