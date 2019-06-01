@@ -22,7 +22,7 @@
 char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int main (int argc, char *argv[]) {
-    char *userName = "FRANCESCo";
+    char *userName = "FRANCESCO";
     char *key = "provaKey";
     int keyIsValid = 0; //1 = true
 
@@ -46,7 +46,9 @@ int main (int argc, char *argv[]) {
     // get the semaphore set
     int semid = semget(semKey, 1, S_IRUSR | S_IWUSR);
 
-    if (semid > 0) {
+    if (semid >= 0) { //todo check >=
+        printf("Controllo la chiave..\n");
+        fflush(stdout);
 
         //retrieve data
         semOp(semid, MUTEX, -1);
@@ -63,7 +65,8 @@ int main (int argc, char *argv[]) {
                    keyIsValid = 1;
 
                    //set the key to a negative value , so it become invalid
-                   strcpy(tmp.key, "-1");
+                   strcpy(tmp.key, "0");
+                   tmp.timeStamp = 0;
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 
                }
@@ -72,7 +75,7 @@ int main (int argc, char *argv[]) {
 
     }
     else {
-        printf("semget failed");
+        printf("semget failed\n");//todo handle
     }
 
     //try to execute program

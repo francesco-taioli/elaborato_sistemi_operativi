@@ -39,7 +39,6 @@ void createFileForKeyManagement();
 
 
 int main (int argc, char *argv[]) {
-    int offset = 0; // index for access to the shm
     sigset_t mySet, prevSet;
     // initialize mySet to contain all signals
     sigfillset(&mySet);
@@ -114,7 +113,7 @@ int main (int argc, char *argv[]) {
 
                 printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
-                if(tmp.timeStamp == 0)break;
+                if(tmp.timeStamp == 0)continue;
                 if(time(0) - tmp.timeStamp > 60 * 1)
                 {
                     // make the key invalid
@@ -132,7 +131,7 @@ int main (int argc, char *argv[]) {
     {
         ////////// parent  //////////
         struct Request request;
-        int bR = -1;                                                                //todo buffer -1 why?
+        ssize_t bR = -1;                                                                //todo buffer -1 why?
         do{
 
             bR = read(serverFIFO, &request, sizeof(struct Request));
@@ -149,25 +148,35 @@ int main (int argc, char *argv[]) {
 
                 //if(offset == MAX_REQUEST_INTO_MEMORY)
                     //signalHandlerServer();
-                printf("sto inserendo i dati..\n");
-                fflush(stdout);
+
                 semOp(semid, MUTEX, -1);
-
+                // search for a free area or a area that can be rewritten because it's invalid
                 struct SHMKeyData shmKeyData;
-                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
-
-                //create hash
-                char hashArray[25]  = "";
-                hash(&request, hashArray);
-                strcpy(shmKeyData.key , hashArray);
-
-                shmKeyData.timeStamp = time(0);
-                memcpy(shmPointer + offset++ , &shmKeyData, sizeof(struct SHMKeyData));
+                struct SHMKeyData *tmpOffset = shmPointer;
+                for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+                    memcpy(&shmKeyData, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
 
-                sendResponse(&request, hashArray);
+                    if(shmKeyData.timeStamp == 0){
+                        //area can be written
+                        printf("sto inserendo i dati..\n");
+                        fflush(stdout);
+                        strcpy( shmKeyData.userIdentifier , request.userIdentifier);
+
+                        //create hash
+                        char hashArray[25]  = "";
+                        hash(&request, hashArray);
+                        strcpy(shmKeyData.key , hashArray);
+
+                        shmKeyData.timeStamp = time(0);
+                        memcpy(tmpOffset + i, &shmKeyData, sizeof(struct SHMKeyData));
+                        sendResponse(&request, hashArray);
+                        break;
+                    };
+
+                }
                 semOp(semid, MUTEX, 1);
-
+                
                 }
 
         } while (bR != -1);
