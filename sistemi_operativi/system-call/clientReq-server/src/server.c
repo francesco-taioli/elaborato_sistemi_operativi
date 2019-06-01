@@ -256,7 +256,7 @@ char * hash(struct Request *request, char * result){
     snprintf(tmp,25, "%d",hash); //todo look
     strcat(result, tmp);
 
-    
+
     strcpy(result, "provaKey");
     return result;
 };
