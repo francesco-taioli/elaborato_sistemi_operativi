@@ -16,7 +16,7 @@
 #include "../inc/shared_memory.h"
 #include "../inc/semaphore.h"
 
-#define MAX_REQUEST_INTO_MEMORY 5
+#define MAX_REQUEST_INTO_MEMORY 15
 #define MUTEX 0
 
 char *pathToServerFIFO = "/tmp/fifo_server";
@@ -123,6 +123,7 @@ int main (int argc, char *argv[]) {
                 }
             }
 
+            // todo nel caso ho saturato la memoria?
             semOp(semid, MUTEX, 1);
         }
 

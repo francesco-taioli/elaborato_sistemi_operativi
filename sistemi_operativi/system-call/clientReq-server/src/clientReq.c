@@ -75,8 +75,7 @@ int main (int argc, char *argv[]) {
     printf("servizio: %s\n", serviceName);
     printf("chiave rilasciata del server: %s\n", response.key);
 
-    //register closeFIFOs() as pre-exit function
-    atexit(closeFIFOs);
+    closeFIFOs();
 
 
 }
