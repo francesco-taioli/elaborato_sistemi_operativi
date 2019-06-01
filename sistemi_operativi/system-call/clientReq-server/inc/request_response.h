@@ -9,13 +9,13 @@ struct Request {   /* Request (client --> server) */
 };
 
 struct Response {  /* Response (server --> client) */
-    char key[25];
+    int key;
 };
 
 // the data that will fit into shared memory
 struct SHMKeyData {
     char userIdentifier[25];
-    char key[25];
+    int key;
     time_t timeStamp;
 };
 

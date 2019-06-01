@@ -73,7 +73,7 @@ int main (int argc, char *argv[]) {
 
     printf("codice identificativo: %s\n", userIdentifier);
     printf("servizio: %s\n", serviceName);
-    printf("chiave rilasciata del server: %s\n", response.key);
+    printf("chiave rilasciata del server: %d\n", response.key);
 
     closeFIFOs();
 

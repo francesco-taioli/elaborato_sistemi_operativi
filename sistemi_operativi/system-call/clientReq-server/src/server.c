@@ -31,8 +31,8 @@ pid_t keyManager;
 void signalHandlerServer(int signal);
 void closeAndRemoveIPC();
 void signalHandlerKeyManager(int signal);
-char * hash(struct Request *request, char * result);
-void sendResponse(struct Request *request, char hash[10]);
+int  hash(struct Request *request);
+void sendResponse(struct Request *request,int hash);
 int createSemaphoreSet(key_t semkey);
 void createFileForKeyManagement();
 
@@ -95,7 +95,7 @@ int main (int argc, char *argv[]) {
     keyManager = fork();
     if(keyManager == 0)
     {
-        ////////// keyamanger //////////
+                                                                ////////// keyamanger //////////
 
         // set signalHandler for keymanager -> sigterm
         if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
@@ -111,13 +111,13 @@ int main (int argc, char *argv[]) {
             for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
                 memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-                printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+                printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
                 if(tmp.timeStamp == 0)continue;
                 if(time(0) - tmp.timeStamp > 60 * 1)
                 {
                     // make the key invalid
-                    strcpy(tmp.key, "-1");
+                    tmp.key = -1;
                     memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
                     //printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
                 }
@@ -158,20 +158,18 @@ int main (int argc, char *argv[]) {
                     memcpy(&shmKeyData, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
 
-                    if(shmKeyData.timeStamp == 0){
+                    if(shmKeyData.key == 0 || shmKeyData.key == -1){ //if the area is free or the key is invalid
                         //area can be written
                         printf("sto inserendo i dati..\n");
                         fflush(stdout);
                         strcpy( shmKeyData.userIdentifier , request.userIdentifier);
 
                         //create hash
-                        char hashArray[25]  = "";
-                        hash(&request, hashArray);
-                        strcpy(shmKeyData.key , hashArray);
+                        shmKeyData.key = hash(&request);
 
                         shmKeyData.timeStamp = time(0);
                         memcpy(tmpOffset + i, &shmKeyData, sizeof(struct SHMKeyData));
-                        sendResponse(&request, hashArray);
+                        sendResponse(&request, shmKeyData.key);
                         break;
                     };
 
@@ -239,30 +237,24 @@ void signalHandlerKeyManager(int signal){
         exit(0);
 };
 
-char * hash(struct Request *request, char * result){
-
-    if(strcmp(request->serviceName, "stampa") == 0)
-        strcpy(result, "stp");
-    else if(strcmp(request->serviceName, "salva") == 0)
-        strcpy(result, "slv");
-    else if(strcmp(request->serviceName, "invia") == 0)
-        strcpy(result, "inv");
-    else strcpy(result, "udf");
+int hash(struct Request *request){
+//
+//    if(strcmp(request->serviceName, "stampa") == 0)
+//        strcpy(result, "stp");
+//    else if(strcmp(request->serviceName, "salva") == 0)
+//        strcpy(result, "slv");
+//    else if(strcmp(request->serviceName, "invia") == 0)
+//        strcpy(result, "inv");
+//    else strcpy(result, "udf");
 
     int hash = 31 * request->clientPid;
     for (int i = 0; request->userIdentifier[i] != '\0' || i < 10 ; i++)
         hash += request->userIdentifier[i];
-
-    char tmp[25];
-    snprintf(tmp,25, "%d",hash); //todo look
-    strcat(result, tmp);
-
-
-    strcpy(result, "provaKey");
-    return result;
+    //return hash;
+    return 5556;
 };
 
-void sendResponse(struct Request *request, char hash[25]) {
+void sendResponse(struct Request *request, int hash) {
 
     // get the extended path for the fifo ( base path + keyManager )
     char pathToClientFIFO [25];
@@ -277,7 +269,7 @@ void sendResponse(struct Request *request, char hash[25]) {
 
     // Prepare the response for the client
     struct Response response;
-    strcpy(response.key , hash);//todo check
+    response.key = hash;
 
 
     // write the response into the client fifo

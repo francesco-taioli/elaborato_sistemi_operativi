@@ -23,7 +23,7 @@ char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int main (int argc, char *argv[]) {
     char *userName = "FRANCESCO";
-    char *key = "provaKey";
+    int key = 5556;
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
@@ -56,17 +56,16 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-            printf("U->%s t->%ld key->%s\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+            printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
             if( strcmp(tmp.userIdentifier, userName) == 0)
-               if(strcmp(tmp.key, key) == 0)
+               if(tmp.key == key)
                {
-                   //execute the program and set the key to negative value
+                   //execute the program
                    keyIsValid = 1;
 
                    //set the key to a negative value , so it become invalid
-                   strcpy(tmp.key, "0");
-                   tmp.timeStamp = 0;
+                   tmp.key = -1;
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 
                }
