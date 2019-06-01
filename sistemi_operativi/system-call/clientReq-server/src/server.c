@@ -176,7 +176,7 @@ int main (int argc, char *argv[]) {
 
                 }
                 semOp(semid, MUTEX, 1);
-                
+
                 }
 
         } while (bR != -1);
@@ -246,18 +246,17 @@ char * hash(struct Request *request, char * result){
         strcpy(result, "slv");
     else if(strcmp(request->serviceName, "invia") == 0)
         strcpy(result, "inv");
-    else strcpy(result, "undef");
+    else strcpy(result, "udf");
 
     int hash = 31 * request->clientPid;
-    for (int i = 0; request->userIdentifier[i] != '\0' || i < 5 ; i++)
+    for (int i = 0; request->userIdentifier[i] != '\0' || i < 10 ; i++)
         hash += request->userIdentifier[i];
 
     char tmp[25];
-    sprintf(tmp,"%d",hash);
+    snprintf(tmp,25, "%d",hash); //todo look
     strcat(result, tmp);
 
-
-
+    
     strcpy(result, "provaKey");
     return result;
 };
