@@ -10,6 +10,7 @@
 #include <sys/sem.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -114,7 +115,7 @@ int main (int argc, char *argv[]) {
                 printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
                 if(tmp.timeStamp == 0)continue;
-                if(time(0) - tmp.timeStamp > 60 * 1)
+                if(time(NULL) - tmp.timeStamp > 60 * 1)
                 {
                     // make the key invalid
                     tmp.key = -1;
@@ -144,7 +145,7 @@ int main (int argc, char *argv[]) {
                 printf("<Server> it looks like I did not receive a valid request\n");
             else {
 
-                printf(" SERVICE %s  USER%s \n" , request.serviceName,  request.userIdentifier);
+                printf(" SERVICE %s  USER %s \n" , request.serviceName,  request.userIdentifier);
                 fflush(stdout);
 
                 //if(offset == MAX_REQUEST_INTO_MEMORY)
@@ -167,7 +168,7 @@ int main (int argc, char *argv[]) {
                         //create hash
                         shmKeyData.key = hash(&request);
 
-                        shmKeyData.timeStamp = time(0);
+                        shmKeyData.timeStamp = time(NULL);
                         memcpy(tmpOffset + i, &shmKeyData, sizeof(struct SHMKeyData));
                         sendResponse(&request, shmKeyData.key);
                         break;
@@ -236,23 +237,35 @@ void signalHandlerKeyManager(int signal){
     if(signal == 15)
         exit(0);
 };
+int concatenate(int x, int y) {
+    int pow = 10;
+    while(y >= pow)
+        pow *= 10;
+    return x * pow + y;
+}
 
 int hash(struct Request *request){
-//
-//    if(strcmp(request->serviceName, "stampa") == 0)
-//        strcpy(result, "stp");
-//    else if(strcmp(request->serviceName, "salva") == 0)
-//        strcpy(result, "slv");
-//    else if(strcmp(request->serviceName, "invia") == 0)
-//        strcpy(result, "inv");
-//    else strcpy(result, "udf");
+    int hash = request->clientPid + ((rand() % 100) * 31); //rand from 0
+    int serviceRecognizer = 0;
+    //todo case insensitive
+    if(strcmp(request->serviceName, "invia") == 0)
+        serviceRecognizer = 11;
+    else if(strcmp(request->serviceName, "salva") == 0 )
+        serviceRecognizer = 22;
+    else if(strcmp(request->serviceName, "stampa") == 0 )
+        serviceRecognizer = 33;
+    else
+        return -1; //invalid value
 
-    int hash = 31 * request->clientPid;
-    for (int i = 0; request->userIdentifier[i] != '\0' || i < 10 ; i++)
+    for (int i = 0; request->userIdentifier[i] != '\0' ; i++)
         hash += request->userIdentifier[i];
-    //return hash;
+    int result = concatenate(hash, serviceRecognizer);
+
+    //return result;
     return 5556;
 };
+
+
 
 void sendResponse(struct Request *request, int hash) {
 

@@ -22,8 +22,17 @@
 char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int main (int argc, char *argv[]) {
-    char *userName = "FRANCESCO";
+    char userIdentifier[25] = "FRANCESCO";
+
+    //char userIdentifier[25];
+    //printf("Inserisci il nome utente: ");
+    //scanf( "%25s", userIdentifier);
+
     int key = 5556;
+    //int key;
+    //printf("Inserisci la chiave: ");
+    //scanf("%d", &key);
+
     int keyIsValid = 0; //1 = true
 
     // access to shared memory
@@ -58,8 +67,8 @@ int main (int argc, char *argv[]) {
 
             printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
-            if( strcmp(tmp.userIdentifier, userName) == 0)
-               if(tmp.key == key)
+            if( strcmp(tmp.userIdentifier, userIdentifier) == 0)
+               if(tmp.key == key && tmp.key != -1)
                {
                    //execute the program
                    keyIsValid = 1;
@@ -107,7 +116,7 @@ int main (int argc, char *argv[]) {
 //    execv(array[0] ,array);
 
     char *argvToPass[]={"stampa","Foois", "prova","myname.",NULL};
-    execv("salva",argvToPass);
+    execv("stampa",argvToPass);
     perror("Execl");
 
 }
