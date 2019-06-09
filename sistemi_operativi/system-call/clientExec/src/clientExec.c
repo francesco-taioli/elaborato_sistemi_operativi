@@ -22,16 +22,20 @@
 char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int main (int argc, char *argv[]) {
-    char userIdentifier[25] = "FRANCESCO";
+    // check command line input arguments
+    if (argc < 3) {
+        printf("Usage: %s  username key param\n", argv[0]);
+        exit(1);
+    }
 
-    //char userIdentifier[25];
-    //printf("Inserisci il nome utente: ");
-    //scanf( "%25s", userIdentifier);
+    char *userIdentifier = argv[1];
 
-    int key = 5556;
-    //int key;
-    //printf("Inserisci la chiave: ");
-    //scanf("%d", &key);
+    // read the message username
+    int key = atoi(argv[2]);
+    if (key <= 0) {
+        printf("Key is invalid!\n");
+        exit(1);
+    }
 
     int keyIsValid = 0; //1 = true
 
@@ -75,6 +79,7 @@ int main (int argc, char *argv[]) {
 
                    //set the key to a negative value , so it become invalid
                    tmp.key = -1;
+
                    memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
 
                }
@@ -93,30 +98,16 @@ int main (int argc, char *argv[]) {
     }
 
 
-    //key is validd, try to execute program
+    //key is valid, try to execute program
+    // take the two last value of key -
+    key = key % 100;
+    char programName[] = "stampa";
+    if(key == 11)
+        strcpy(programName, "invia");
+    else if(key == 22)
+        strcpy(programName, "salva");
 
-    //todo execute program
-
-//    char buffer[100];
-//    printf("Inserisci [nome programma][parametri]:");
-//    scanf("%99[^\n]", buffer); //Any number of characters none of them specified as characters between the brackets. = negated scanset
-//
-//    int i = 0;
-//    char *p = strtok (buffer, " ");
-//    char *array[100];
-//    while (p != NULL)
-//    {
-//        array[i++] = p;
-//        p = strtok (NULL, " ");
-//    }
-//    array[i] = NULL;
-//
-//
-//    printf("Eseguo %s ...\n", array[0] );
-//    execv(array[0] ,array);
-
-    char *argvToPass[]={"stampa","Foois", "prova","myname.",NULL};
-    execv("stampa",argvToPass);
+    execv(programName,argv);
     perror("Execl");
 
 }
