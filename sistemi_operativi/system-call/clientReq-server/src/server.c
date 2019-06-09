@@ -154,27 +154,33 @@ int main (int argc, char *argv[]) {
                 semOp(semid, MUTEX, -1);
                 // search for a free area or a area that can be rewritten because it's invalid
                 struct SHMKeyData shmKeyData;
-                struct SHMKeyData *tmpOffset = shmPointer;
-                for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
-                    memcpy(&shmKeyData, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
+                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
 
+                struct SHMKeyData *tmpOffset = shmPointer;
+                int index;
+                for (index = 0; index < MAX_REQUEST_INTO_MEMORY; index++) {
+                    memcpy(&shmKeyData, tmpOffset + index, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
                     if(shmKeyData.key == 0 || shmKeyData.key == -1){ //if the area is free or the key is invalid
                         //area can be written
-                        printf("sto inserendo i dati..\n");
+                        printf("creo una chiave valida..\n");
                         fflush(stdout);
-                        strcpy( shmKeyData.userIdentifier , request.userIdentifier);
 
                         //create hash
                         shmKeyData.key = hash(&request);
-
-                        shmKeyData.timeStamp = time(NULL);
-                        memcpy(tmpOffset + i, &shmKeyData, sizeof(struct SHMKeyData));
-                        sendResponse(&request, shmKeyData.key);
                         break;
                     };
 
                 }
+                if(index == MAX_REQUEST_INTO_MEMORY) {
+                    printf("MEMORIA SATURA\n");
+                    fflush(stdout);
+                    shmKeyData.key = -1;
+                }
+
+                shmKeyData.timeStamp = time(NULL);
+                memcpy(tmpOffset + index, &shmKeyData, sizeof(struct SHMKeyData));
+                sendResponse(&request, shmKeyData.key);
                 semOp(semid, MUTEX, 1);
 
                 }
