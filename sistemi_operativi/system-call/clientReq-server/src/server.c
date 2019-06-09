@@ -112,7 +112,7 @@ int main (int argc, char *argv[]) {
             for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
                 memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-                printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+                //printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
                 if(tmp.timeStamp == 0)continue;
                 if(time(NULL) - tmp.timeStamp > 60 * 1)
@@ -120,7 +120,8 @@ int main (int argc, char *argv[]) {
                     // make the key invalid
                     tmp.key = -1;
                     memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
-                    //printf("\nremove key : -> User %s Key%s\n", tmp.userIdentifier, tmp.key);
+                    printf("\nremove key : -> User %s Key%d\n", tmp.userIdentifier, tmp.key);
+                    fflush(stdout);
                 }
             }
 
@@ -148,13 +149,11 @@ int main (int argc, char *argv[]) {
                 printf(" SERVICE %s  USER %s \n" , request.serviceName,  request.userIdentifier);
                 fflush(stdout);
 
-                //if(offset == MAX_REQUEST_INTO_MEMORY)
-                    //signalHandlerServer();
 
                 semOp(semid, MUTEX, -1);
                 // search for a free area or a area that can be rewritten because it's invalid
-                struct SHMKeyData shmKeyData;
-                strcpy( shmKeyData.userIdentifier , request.userIdentifier);
+                struct SHMKeyData shmKeyData, shmToInsert;
+                strcpy( shmKeyData.userIdentifier , "fsdfsdfs");
 
                 struct SHMKeyData *tmpOffset = shmPointer;
                 int index;
@@ -167,7 +166,7 @@ int main (int argc, char *argv[]) {
                         fflush(stdout);
 
                         //create hash
-                        shmKeyData.key = hash(&request);
+                        shmToInsert.key = hash(&request);
                         break;
                     };
 
@@ -175,12 +174,13 @@ int main (int argc, char *argv[]) {
                 if(index == MAX_REQUEST_INTO_MEMORY) {
                     printf("MEMORIA SATURA\n");
                     fflush(stdout);
-                    shmKeyData.key = -1;
+                    shmToInsert.key = -1;
                 }
 
-                shmKeyData.timeStamp = time(NULL);
-                memcpy(tmpOffset + index, &shmKeyData, sizeof(struct SHMKeyData));
-                sendResponse(&request, shmKeyData.key);
+                shmToInsert.timeStamp = time(NULL);
+                strcpy( shmToInsert.userIdentifier , request.userIdentifier);
+                memcpy(tmpOffset + index, &shmToInsert, sizeof(struct SHMKeyData));
+                sendResponse(&request, shmToInsert.key);
                 semOp(semid, MUTEX, 1);
 
                 }
