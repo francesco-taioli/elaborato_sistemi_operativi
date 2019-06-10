@@ -6,6 +6,7 @@
 #include "../inc/errExit.h"
 
 int main (int argc, char *argv[]) {
+    printf("Hi, I'm Salva program! Let's save...\n");
     /* Open new or existing file for reading/writing, truncating
     to zero bytes; file permissions read+write only for owner*/
     int fd = open(argv[3],
