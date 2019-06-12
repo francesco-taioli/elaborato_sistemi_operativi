@@ -4,7 +4,7 @@
 #include <sys/types.h>
 struct Request {   /* Request (client --> server) */
     pid_t clientPid;
-    char serviceName[10];      /* Stampa, Salva o Invia*/
+    char serviceName[7];      /* Stampa, Salva o Invia*/
     char userIdentifier[25];
 };
 

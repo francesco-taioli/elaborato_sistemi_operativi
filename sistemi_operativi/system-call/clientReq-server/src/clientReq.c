@@ -25,14 +25,17 @@ void closeFIFOs(){
         errExit("unlink from the file system -> failed");
 }
 int main (int argc, char *argv[]) {
-
-    char userIdentifier[25] = "FRANCESCO";
-    char *serviceName = "stampa";
-
     printf("Benvenuto in clientReq!\n");
     printf("digita uno fra i sequenti servizi\n\tStampa, Salva e invia\n\n");
 
-    //TODO PRENDERE IN Input useridentifier e servicename da scanf e printf
+    char userIdentifier[25];
+    printf("Inserisci il nome utente: ");
+    scanf( "%25s", userIdentifier);
+
+
+    char serviceName[7];
+    printf("Inserisci il nome del servizio: ");
+    scanf("%7s", serviceName);
 
     // get the extended path for the fifo ( base path + pid )
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, getpid());
@@ -55,7 +58,7 @@ int main (int argc, char *argv[]) {
 
 
     // send the request through server fifo
-    if (write(serverFIFO, &request, sizeof(struct Request)) //todo rileggi  sizeof(struct Request)!= sizeof(struct Request))
+    if (write(serverFIFO, &request, sizeof(struct Request))
             != sizeof(struct Request))
         errExit("write to fifo server -> failed");
 

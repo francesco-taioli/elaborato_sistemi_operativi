@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -18,6 +19,7 @@
 #include "../inc/semaphore.h"
 
 #define MAX_REQUEST_INTO_MEMORY 15
+#define MINUTES 2
 #define MUTEX 0
 
 char *pathToServerFIFO = "/tmp/fifo_server";
@@ -75,7 +77,7 @@ int main (int argc, char *argv[]) {
 
     semid = createSemaphoreSet(semKey);
 
-    //todo giusto che crashi quando  il file è gia statp creato
+
     // make the server fifo -> rw- -w- ---
     if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
         errExit("creation of server fifo -> failed");
@@ -85,7 +87,7 @@ int main (int argc, char *argv[]) {
     if (serverFIFO == -1)
         errExit("open server fifo  read-only -> failed");
 
-    // Open an extra descriptor, so that the server does not see end-of-file    todo why
+    // Open an extra descriptor, so that the server does not see end-of-file
     // even if all clients closed the write end of the FIFO
     serverFIFO_extra = open(pathToServerFIFO, O_WRONLY);
     if (serverFIFO_extra == -1)
@@ -115,7 +117,7 @@ int main (int argc, char *argv[]) {
                 //printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
                 if(tmp.timeStamp == 0)continue;
-                if(time(NULL) - tmp.timeStamp > 60 * 1)
+                if(time(NULL) - tmp.timeStamp > 60 * MINUTES)
                 {
                     // make the key invalid
                     tmp.key = -1;
@@ -124,8 +126,6 @@ int main (int argc, char *argv[]) {
                     fflush(stdout);
                 }
             }
-
-            // todo nel caso ho saturato la memoria?
             semOp(semid, MUTEX, 1);
         }
 
@@ -156,12 +156,14 @@ int main (int argc, char *argv[]) {
                 strcpy( shmKeyData.userIdentifier , "fsdfsdfs");
 
                 struct SHMKeyData *tmpOffset = shmPointer;
+                int memoryIsSaturated = 1; //1 is true
                 int index;
-                for (index = 0; index < MAX_REQUEST_INTO_MEMORY; index++) {
+                for ( index = 0; index < MAX_REQUEST_INTO_MEMORY; index++) {
                     memcpy(&shmKeyData, tmpOffset + index, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
                     if(shmKeyData.key == 0 || shmKeyData.key == -1){ //if the area is free or the key is invalid
                         //area can be written
+                        memoryIsSaturated = 0;
                         printf("creo una chiave valida..\n");
                         fflush(stdout);
 
@@ -171,7 +173,7 @@ int main (int argc, char *argv[]) {
                     };
 
                 }
-                if(index == MAX_REQUEST_INTO_MEMORY) {
+                if(memoryIsSaturated) {
                     printf("MEMORIA SATURA\n");
                     fflush(stdout);
                     shmToInsert.key = -1;
@@ -209,7 +211,7 @@ void closeAndRemoveIPC(){
     if (serverFIFO != 0 && close(serverFIFO) == -1)
         errExit("close server fifo -> failed");
 
-    if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1) //todo why? unlink server fifo
+    if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1)
         errExit("close failed");
 
     // Remove the FIFO
@@ -267,8 +269,8 @@ int hash(struct Request *request){
         hash += request->userIdentifier[i];
     int result = concatenate(hash, serviceRecognizer);
 
-    //return result;
-    return 555533;
+    return result;
+    //return 555533;
 };
 
 
@@ -283,7 +285,7 @@ void sendResponse(struct Request *request, int hash) {
     int clientFIFO = open(pathToClientFIFO, O_WRONLY);
     if (clientFIFO == -1) {
         printf("server open the client fifo -> failed");
-        return; //todo check
+        return;
     }
 
     // Prepare the response for the client

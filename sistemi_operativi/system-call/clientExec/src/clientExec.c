@@ -69,7 +69,7 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
             memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
 
-            printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
+            //printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
 
             if( strcmp(tmp.userIdentifier, userIdentifier) == 0)
                if(tmp.key == key && tmp.key != -1)
@@ -94,7 +94,7 @@ int main (int argc, char *argv[]) {
     //try to execute program
     if(!keyIsValid){
         printf("La chiave non era valida o è scaduta\n");
-        exit(-1); //todo check
+        exit(1);
     }
 
 
