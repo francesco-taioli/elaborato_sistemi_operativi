@@ -11,7 +11,6 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include <ctype.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -19,7 +18,7 @@
 #include "../inc/semaphore.h"
 
 #define MAX_REQUEST_INTO_MEMORY 15
-#define MINUTES 2
+#define MINUTES 1
 #define MUTEX 0
 
 char *pathToServerFIFO = "/tmp/fifo_server";
@@ -35,13 +34,15 @@ void signalHandlerServer(int signal);
 void closeAndRemoveIPC();
 void signalHandlerKeyManager(int signal);
 int  hash(struct Request *request);
-void sendResponse(struct Request *request,int hash);
+void sendResponse(struct Request *request);
 int createSemaphoreSet(key_t semkey);
 void createFileForKeyManagement();
+void child();
 
 
 
 int main (int argc, char *argv[]) {
+    srand(time(0));
     sigset_t mySet, prevSet;
     // initialize mySet to contain all signals
     sigfillset(&mySet);
@@ -77,7 +78,6 @@ int main (int argc, char *argv[]) {
 
     semid = createSemaphoreSet(semKey);
 
-
     // make the server fifo -> rw- -w- ---
     if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
         errExit("creation of server fifo -> failed");
@@ -96,96 +96,20 @@ int main (int argc, char *argv[]) {
 
     //create keyMananger
     keyManager = fork();
-    if(keyManager == 0)
-    {
-                                                                ////////// keyamanger //////////
-
-        // set signalHandler for keymanager -> sigterm
-        if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
-            errExit("keyManager unable to catch signal sigterm");
-
-
-        while(1){
-            sleep(30);
-
-            semOp(semid, MUTEX, -1);
-            struct SHMKeyData tmp;
-            struct SHMKeyData *tmpOffset = shmPointer;
-            for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
-                memcpy(&tmp, tmpOffset + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
-
-                //printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
-
-                if(tmp.timeStamp == 0)continue;
-                if(time(NULL) - tmp.timeStamp > 60 * MINUTES)
-                {
-                    // make the key invalid
-                    tmp.key = -1;
-                    memcpy(tmpOffset + i, &tmp, sizeof(struct SHMKeyData));
-                    printf("\nremove key : -> User %s Key%d\n", tmp.userIdentifier, tmp.key);
-                    fflush(stdout);
-                }
-            }
-            semOp(semid, MUTEX, 1);
-        }
-
-    }
+    if(keyManager == 0) child();
     else if(keyManager > 0)
     {
         ////////// parent  //////////
         struct Request request;
-        ssize_t bR = -1;                                                                //todo buffer -1 why?
+        ssize_t bR = -1;
         do{
-
             bR = read(serverFIFO, &request, sizeof(struct Request));
-
             if (bR == -1) {
                 printf("<Server> it looks like the FIFO is broken\n");
             }
             else if (bR != sizeof(struct Request) || bR == 0)
                 printf("<Server> it looks like I did not receive a valid request\n");
-            else {
-
-                printf(" SERVICE %s  USER %s \n" , request.serviceName,  request.userIdentifier);
-                fflush(stdout);
-
-
-                semOp(semid, MUTEX, -1);
-                // search for a free area or a area that can be rewritten because it's invalid
-                struct SHMKeyData shmKeyData, shmToInsert;
-                strcpy( shmKeyData.userIdentifier , "fsdfsdfs");
-
-                struct SHMKeyData *tmpOffset = shmPointer;
-                int memoryIsSaturated = 1; //1 is true
-                int index;
-                for ( index = 0; index < MAX_REQUEST_INTO_MEMORY; index++) {
-                    memcpy(&shmKeyData, tmpOffset + index, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
-
-                    if(shmKeyData.key == 0 || shmKeyData.key == -1){ //if the area is free or the key is invalid
-                        //area can be written
-                        memoryIsSaturated = 0;
-                        printf("creo una chiave valida..\n");
-                        fflush(stdout);
-
-                        //create hash
-                        shmToInsert.key = hash(&request);
-                        break;
-                    };
-
-                }
-                if(memoryIsSaturated) {
-                    printf("MEMORIA SATURA\n");
-                    fflush(stdout);
-                    shmToInsert.key = -1;
-                }
-
-                shmToInsert.timeStamp = time(NULL);
-                strcpy( shmToInsert.userIdentifier , request.userIdentifier);
-                memcpy(tmpOffset + index, &shmToInsert, sizeof(struct SHMKeyData));
-                sendResponse(&request, shmToInsert.key);
-                semOp(semid, MUTEX, 1);
-
-                }
+            else  sendResponse(&request);
 
         } while (bR != -1);
 
@@ -197,6 +121,36 @@ int main (int argc, char *argv[]) {
         //error
         printf("  %d  error fork", keyManager);
         closeAndRemoveIPC();
+    }
+};
+
+
+void child(){
+    //todo devo creare fill set e roba varia?
+    // set signalHandler for keymanager -> sigterm
+    if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
+        errExit("keyManager unable to catch signal sigterm");
+
+    while(1){
+        sleep(30);
+
+        semOp(semid, MUTEX, -1);
+        printf("<KeyManager> cerco chiavi scadute ...\n");
+        fflush(stdout);
+
+        for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+            if(shmPointer[i].timeStamp == 0)continue;
+            if(time(NULL) - shmPointer[i].timeStamp > 60 * MINUTES )
+            {
+                // make the key invalid
+                if(shmPointer[i].key != -1){
+                    printf("\nremove key : -> User %s Key%d\n", shmPointer[i].userIdentifier, shmPointer[i].key);
+                    fflush(stdout);
+                    shmPointer[i].key = -1;
+                }
+            }
+        }
+        semOp(semid, MUTEX, 1);
     }
 };
 
@@ -275,7 +229,37 @@ int hash(struct Request *request){
 
 
 
-void sendResponse(struct Request *request, int hash) {
+void sendResponse(struct Request *request) {
+    int key = -1;
+
+    printf(" SERVICE %s  USER %s \n" , request->serviceName,  request->userIdentifier);
+    fflush(stdout);
+
+    semOp(semid, MUTEX, -1);
+    // search for a free area or a area that can be rewritten because it's invalid
+    int memoryIsSaturated = 1; //1 is true
+    int index;
+    for ( index = 0; index < MAX_REQUEST_INTO_MEMORY; index++) {
+        if(shmPointer[index].key == 0 || shmPointer[index].key == -1){ //if the area is free or the key is invalid
+            //area can be written
+            memoryIsSaturated = 0;
+            printf("creo una chiave ..\n");
+            fflush(stdout);
+
+            //create hash
+            key = hash(request);
+            shmPointer[index].key = key;
+            break;
+        };
+    }
+    if(memoryIsSaturated) {
+        printf("MEMORIA SATURA\n");
+        fflush(stdout);
+    }
+
+    shmPointer[index].timeStamp = time(NULL);
+    strcpy( shmPointer[index].userIdentifier , request->userIdentifier);
+    semOp(semid, MUTEX, 1);
 
     // get the extended path for the fifo ( base path + keyManager )
     char pathToClientFIFO [25];
@@ -290,7 +274,7 @@ void sendResponse(struct Request *request, int hash) {
 
     // Prepare the response for the client
     struct Response response;
-    response.key = hash;
+    response.key = key;
 
 
     // write the response into the client fifo
