@@ -58,38 +58,26 @@ int main (int argc, char *argv[]) {
 
     // get the semaphore set
     int semid = semget(semKey, 1, S_IRUSR | S_IWUSR);
+    if(semid < 0)
+        errExit("semget failed");
 
-    if (semid >= 0) { //todo check >=
-        printf("Controllo la chiave..\n");
-        fflush(stdout);
+    printf("Controllo la chiave..\n");
+    fflush(stdout);
 
-        //retrieve data
-        semOp(semid, MUTEX, -1);
-        struct SHMKeyData tmp;
-        for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
-            memcpy(&tmp, shmPointer + i, sizeof(struct SHMKeyData));    //increase pointer to access the next struct
-
-            //printf("U->%s t->%ld key->%d\n", tmp.userIdentifier, tmp.timeStamp, tmp.key);
-
-            if( strcmp(tmp.userIdentifier, userIdentifier) == 0)
-               if(tmp.key == key && tmp.key != -1)
-               {
-                   //execute the program
-                   keyIsValid = 1;
-
-                   //set the key to a negative value , so it become invalid
-                   tmp.key = -1;
-
-                   memcpy(shmPointer + i, &tmp, sizeof(struct SHMKeyData));
-
-               }
-        }
-        semOp(semid, MUTEX, 1);
-
+    //retrieve data
+    semOp(semid, MUTEX, -1);
+    for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+        if( strcmp(shmPointer[i].userIdentifier, userIdentifier) == 0)
+            if(shmPointer[i].key == key && shmPointer[i].key != -1)
+            {
+                //execute the program
+                keyIsValid = 1;
+                //set the key to a negative value , so it become invalid
+                shmPointer[i].key = -1;
+            }
     }
-    else {
-        printf("semget failed\n");//todo handle
-    }
+    semOp(semid, MUTEX, 1);
+
 
     //try to execute program
     if(!keyIsValid){
