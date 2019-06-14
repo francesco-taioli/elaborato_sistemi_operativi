@@ -9,9 +9,9 @@
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
 
-char *pathToServerFIFO = "/tmp/fifo_server";
-char *basePathToClientFIFO = "/tmp/fifo_client."; // to handle multiple process
-char pathToClientFIFO [25]; //extended path for the fif
+char *pathToServerFIFO = "/tmp/vr422009.fifo_server";
+char *basePathToClientFIFO = "/tmp/vr422009.fifo_client."; // to handle multiple process
+char pathToClientFIFO [35]; //extended path for the fif
 int serverFIFO, clientFIFO;
 
 void closeFIFOs(){

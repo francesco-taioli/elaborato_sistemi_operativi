@@ -50,7 +50,6 @@ int main (int argc, char *argv[]) {
     // attach the shared memory segment
     struct SHMKeyData *shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
 
-
     // create a semaphore set
     key_t semKey = ftok(pathKeyFtok, 'g');
     if (semKey == -1)
@@ -78,13 +77,11 @@ int main (int argc, char *argv[]) {
     }
     semOp(semid, MUTEX, 1);
 
-
     //try to execute program
     if(!keyIsValid){
         printf("La chiave non era valida o è scaduta\n");
         exit(1);
     }
-
 
     //key is valid, try to execute program
     // take the two last value of key -
@@ -96,6 +93,7 @@ int main (int argc, char *argv[]) {
         strcpy(programName, "salva");
 
     execv(programName,argv);
-    perror("Execl");
+    perror("failed to execute program");
+
 
 }

@@ -12,6 +12,7 @@
 #include <time.h>
 #include <math.h>
 
+
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
 #include "../inc/shared_memory.h"
@@ -21,8 +22,8 @@
 #define MINUTES 1
 #define MUTEX 0
 
-char *pathToServerFIFO = "/tmp/fifo_server";
-char *basePathToClientFIFO = "/tmp/fifo_client."; // to handle multiple process
+char *pathToServerFIFO = "/tmp/vr422009.fifo_server";
+char *basePathToClientFIFO = "/tmp/vr422009.fifo_client."; // to handle multiple process
 char *pathKeyFtok = "/tmp/vr422009.tmp";
 
 int serverFIFO, serverFIFO_extra, semid, shmidServer;
@@ -144,7 +145,7 @@ void child(){
             {
                 // make the key invalid
                 if(shmPointer[i].key != -1){
-                    printf("\nremove key : -> User %s Key%d\n", shmPointer[i].userIdentifier, shmPointer[i].key);
+                    printf("<KeyManager>remove key.. User: %s Key: %d\n", shmPointer[i].userIdentifier, shmPointer[i].key);
                     fflush(stdout);
                     shmPointer[i].key = -1;
                 }
@@ -232,7 +233,7 @@ int hash(struct Request *request){
 void sendResponse(struct Request *request) {
     int key = -1;
 
-    printf(" SERVICE %s  USER %s \n" , request->serviceName,  request->userIdentifier);
+    printf("<Server> richiesta ricevuta ... service: %s  user :%s \n" , request->serviceName,  request->userIdentifier);
     fflush(stdout);
 
     semOp(semid, MUTEX, -1);
@@ -243,7 +244,7 @@ void sendResponse(struct Request *request) {
         if(shmPointer[index].key == 0 || shmPointer[index].key == -1){ //if the area is free or the key is invalid
             //area can be written
             memoryIsSaturated = 0;
-            printf("creo una chiave ..\n");
+            printf("<Server>creo una chiave ..\n");
             fflush(stdout);
 
             //create hash
