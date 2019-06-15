@@ -30,6 +30,7 @@ int serverFIFO, serverFIFO_extra, semid, shmidServer;
 struct SHMKeyData *shmPointer;
 
 pid_t keyManager;
+int childCreated = 0;
 
 void signalHandlerServer(int signal);
 void closeAndRemoveIPC();
@@ -43,6 +44,9 @@ void child();
 
 
 int main (int argc, char *argv[]) {
+    //register closeAndRemoveIPC as pre-exit function
+    atexit(closeAndRemoveIPC);
+
     srand(time(0));
     sigset_t mySet, prevSet;
     // initialize mySet to contain all signals
@@ -54,6 +58,8 @@ int main (int argc, char *argv[]) {
 
     if (signal(SIGTERM, signalHandlerServer) == SIG_ERR)
        errExit("change signal handler failed");
+
+
 
     printf("%d\n", getpid());
     fflush(stdout);
@@ -67,7 +73,7 @@ int main (int argc, char *argv[]) {
         errExit("ftok for shmKey failed");
 
     // allocate a shared memory segment
-    shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
+    shmidServer = alloc_shared_memory(-100, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
 
     // attach the shared memory segment
     shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
@@ -83,6 +89,8 @@ int main (int argc, char *argv[]) {
     if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
         errExit("creation of server fifo -> failed");
 
+    //errExit("change signal handler failed");
+
     // wait a client req
     serverFIFO = open(pathToServerFIFO, O_RDONLY);
     if (serverFIFO == -1)
@@ -97,6 +105,7 @@ int main (int argc, char *argv[]) {
 
     //create keyMananger
     keyManager = fork();
+    childCreated = 1;
     if(keyManager == 0) child();
     else if(keyManager > 0)
     {
@@ -121,7 +130,7 @@ int main (int argc, char *argv[]) {
     else{
         //error
         printf("  %d  error fork", keyManager);
-        closeAndRemoveIPC();
+        exit(1);
     }
 };
 
@@ -157,49 +166,57 @@ void child(){
 
 
 void signalHandlerServer(int signal){
-    kill(keyManager, SIGTERM);
-    closeAndRemoveIPC();
+    printf("<server> receive %s ----- \n", signal == 15? "SIGTERM" : "signal");
+    exit(0);
+};
+
+void signalHandlerKeyManager(int signal){
+    printf("<keyManager> receive %s -----\n", signal == 15? "SIGTERM" : "signal");
+    exit(0);
 };
 
 void closeAndRemoveIPC(){
-    // Close the FIFO
-    if (serverFIFO != 0 && close(serverFIFO) == -1)
-        errExit("close server fifo -> failed");
+    // eseguo questo se sono il padre o in caso di crash del programma
+    if(keyManager != 0 || ( keyManager == 0 && childCreated == 0)){
 
-    if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1)
-        errExit("close failed");
+        printf("<server> removing files ...\n");
+        // Close the FIFO
+        if (serverFIFO != 0 && close(serverFIFO) == -1)
+            errExit("close server fifo -> failed");
 
-    // Remove the FIFO
-    printf("<Server> removing server  FIFO...\n");
-    if (unlink(pathToServerFIFO) != 0)
-        errExit("unlink server fifo -> failed");
+        if (serverFIFO_extra != 0 && close(serverFIFO_extra) == -1)
+            errExit("close failed");
 
-    //remove the ftok file
-    // Remove the FIFO
-    if (unlink(pathKeyFtok) != 0)
-        errExit("unlink pathKeyFtok  -> failed");
+        // Remove the FIFO
+        printf("<Server> removing server  FIFO...\n");
+        if (unlink(pathToServerFIFO) != 0)
+            errExit("unlink server fifo -> failed");
 
-    // remove the created semaphore set
-    printf("<Server> removing the semaphore set...\n");
-    if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
-        errExit("semctl IPC_RMID failed");
+        //remove the ftok file
+        // Remove the FIFO
+        if (unlink(pathKeyFtok) != 0)
+            errExit("unlink pathKeyFtok  -> failed");
 
-    // detach the shared memory segment
-    printf("\n<Server> detaching the shared memory segment...\n");
-    free_shared_memory(shmPointer);
+        // remove the created semaphore set
+        printf("<Server> removing the semaphore set...\n");
+        if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
+            errExit("semctl IPC_RMID failed");
 
-    // remove the shared memory segment
-    printf("<Server> removing the shared memory segment...\n");
-    remove_shared_memory(shmidServer);
+        // detach the shared memory segment
+        printf("<Server> detaching the shared memory segment...\n");
+        free_shared_memory(shmPointer);
 
-    // terminate the process
-    _exit(0);
+        // remove the shared memory segment
+        printf("<Server> removing the shared memory segment...\n");
+        remove_shared_memory(shmidServer);
+        if(childCreated)
+            kill(keyManager, SIGTERM);
+
+
+    }
 }
 
-void signalHandlerKeyManager(int signal){
-    if(signal == 15)
-        exit(0);
-};
+
 int concatenate(int x, int y) {
     int pow = 10;
     while(y >= pow)

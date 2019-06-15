@@ -28,12 +28,12 @@ int main (int argc, char *argv[]) {
     printf("Benvenuto in clientReq!\n");
     printf("digita uno fra i sequenti servizi\n\tStampa, Salva e invia\n\n");
 
-    char userIdentifier[25];
+    char userIdentifier[26];
     printf("Inserisci il nome utente: ");
     scanf( "%25s", userIdentifier);
 
 
-    char serviceName[7];
+    char serviceName[8];
     printf("Inserisci il nome del servizio: ");
     scanf("%7s", serviceName);
 
