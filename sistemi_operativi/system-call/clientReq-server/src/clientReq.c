@@ -29,12 +29,11 @@ int main (int argc, char *argv[]) {
     printf("digita uno fra i sequenti servizi\n\tStampa, Salva e invia\n\n");
 
     char userIdentifier[26];
-    printf("Inserisci il nome utente: ");
+    printf("Inserisci il nome utente(25 caratteri max): ");
     scanf( "%25s", userIdentifier);
-
-
+    
     char serviceName[7];
-    printf("Inserisci il nome del servizio: ");
+    printf("Inserisci il nome del servizio(6 caratteri max): ");
     scanf("%6s", serviceName);
 
     // get the extended path for the fifo ( base path + pid )
@@ -74,7 +73,7 @@ int main (int argc, char *argv[]) {
         errExit("read response from the server -> failed");
 
 
-    printf("codice identificativo: %s\n", userIdentifier);
+    printf("\ncodice identificativo: %s\n", userIdentifier);
     printf("servizio: %s\n", serviceName);
     printf("chiave rilasciata del server: %d\n", response.key);
 
