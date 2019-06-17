@@ -16,7 +16,7 @@
 #include "../inc/semaphore.h"
 
 
-#define MAX_REQUEST_INTO_MEMORY 15
+#define MAX_REQUEST_INTO_MEMORY 21
 #define MUTEX 0
 
 char *pathKeyFtok = "/tmp/vr422009.tmp";
@@ -66,6 +66,7 @@ int main (int argc, char *argv[]) {
     //retrieve data
     semOp(semid, MUTEX, -1);
     for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+        //printf(" U:%s K:%d T:%ld \n", shmPointer[i].userIdentifier, shmPointer[i].key, shmPointer[i].timeStamp);
         if( strcmp(shmPointer[i].userIdentifier, userIdentifier) == 0)
             if(shmPointer[i].key == key && shmPointer[i].key != -1)
             {

@@ -5,7 +5,7 @@
 struct Request {   /* Request (client --> server) */
     pid_t clientPid;
     char serviceName[7];      /* Stampa, Salva o Invia*/
-    char userIdentifier[25];
+    char userIdentifier[26];
 };
 
 struct Response {  /* Response (server --> client) */
@@ -14,7 +14,7 @@ struct Response {  /* Response (server --> client) */
 
 // the data that will fit into shared memory
 struct SHMKeyData {
-    char userIdentifier[25];
+    char userIdentifier[26];
     int key;
     time_t timeStamp;
 };

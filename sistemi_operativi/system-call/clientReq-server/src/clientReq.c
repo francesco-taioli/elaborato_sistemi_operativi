@@ -33,9 +33,9 @@ int main (int argc, char *argv[]) {
     scanf( "%25s", userIdentifier);
 
 
-    char serviceName[8];
+    char serviceName[7];
     printf("Inserisci il nome del servizio: ");
-    scanf("%7s", serviceName);
+    scanf("%6s", serviceName);
 
     // get the extended path for the fifo ( base path + pid )
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, getpid());

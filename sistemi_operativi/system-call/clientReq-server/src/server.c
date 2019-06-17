@@ -18,7 +18,8 @@
 #include "../inc/shared_memory.h"
 #include "../inc/semaphore.h"
 
-#define MAX_REQUEST_INTO_MEMORY 15
+#define MAX_REQUEST_INTO_MEMORY 21
+
 #define MINUTES 1
 #define MUTEX 0
 
@@ -59,9 +60,7 @@ int main (int argc, char *argv[]) {
     if (signal(SIGTERM, signalHandlerServer) == SIG_ERR)
        errExit("change signal handler failed");
 
-
-
-    printf("%d\n", getpid());
+    printf("<Server> Running with pid %d\n", getpid());
     fflush(stdout);
 
     // create file for ftok
@@ -73,7 +72,7 @@ int main (int argc, char *argv[]) {
         errExit("ftok for shmKey failed");
 
     // allocate a shared memory segment
-    shmidServer = alloc_shared_memory(-100, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
+    shmidServer = alloc_shared_memory(shmKey, sizeof(struct SHMKeyData) * MAX_REQUEST_INTO_MEMORY);
 
     // attach the shared memory segment
     shmPointer = (struct SHMKeyData*)get_shared_memory(shmidServer, 0);
@@ -89,7 +88,6 @@ int main (int argc, char *argv[]) {
     if (mkfifo(pathToServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
         errExit("creation of server fifo -> failed");
 
-    //errExit("change signal handler failed");
 
     // wait a client req
     serverFIFO = open(pathToServerFIFO, O_RDONLY);
@@ -149,6 +147,7 @@ void child(){
         fflush(stdout);
 
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
+            //printf(" U:%s K:%d T:%ld\n", shmPointer[i].userIdentifier, shmPointer[i].key, shmPointer[i].timeStamp);
             if(shmPointer[i].timeStamp == 0)continue;
             if(time(NULL) - shmPointer[i].timeStamp > 60 * MINUTES )
             {
@@ -270,6 +269,7 @@ void sendResponse(struct Request *request) {
             break;
         };
     }
+
     if(memoryIsSaturated) {
         printf("MEMORIA SATURA\n");
         fflush(stdout);
@@ -280,7 +280,7 @@ void sendResponse(struct Request *request) {
     semOp(semid, MUTEX, 1);
 
     // get the extended path for the fifo ( base path + keyManager )
-    char pathToClientFIFO [25];
+    char pathToClientFIFO [35];
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, request->clientPid);
 
     // Open the client's FIFO in write-only mode
