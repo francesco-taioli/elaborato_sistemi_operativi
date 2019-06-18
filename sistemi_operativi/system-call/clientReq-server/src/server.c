@@ -20,7 +20,7 @@
 
 #define MAX_REQUEST_INTO_MEMORY 21
 
-#define MINUTES 1
+#define MINUTES 5
 #define MUTEX 0
 
 char *pathToServerFIFO = "/tmp/vr422009.fifo_server";
@@ -61,7 +61,6 @@ int main (int argc, char *argv[]) {
        errExit("change signal handler failed");
 
     printf("<Server> Running with pid %d\n", getpid());
-    fflush(stdout);
 
     // create file for ftok
     createFileForKeyManagement();
@@ -89,7 +88,7 @@ int main (int argc, char *argv[]) {
         errExit("creation of server fifo -> failed");
 
 
-    // wait a client req
+    // wait a client request
     serverFIFO = open(pathToServerFIFO, O_RDONLY);
     if (serverFIFO == -1)
         errExit("open server fifo  read-only -> failed");
@@ -121,9 +120,6 @@ int main (int argc, char *argv[]) {
 
         } while (bR != -1);
 
-        //sigprocmask(SIG_SETMASK, &prevSet, NULL); todo serve?
-        //register closeFIFOs() as pre-exit function
-        //atexit(signalHandlerServer);
     }
     else{
         //error
@@ -134,8 +130,6 @@ int main (int argc, char *argv[]) {
 
 
 void child(){
-    //todo devo creare fill set e roba varia?
-    // set signalHandler for keymanager -> sigterm
     if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
         errExit("keyManager unable to catch signal sigterm");
 
@@ -144,7 +138,6 @@ void child(){
 
         semOp(semid, MUTEX, -1);
         printf("<KeyManager> cerco chiavi scadute ...\n");
-        fflush(stdout);
 
         for (int i = 0; i < MAX_REQUEST_INTO_MEMORY; i++) {
             //printf(" U:%s K:%d T:%ld\n", shmPointer[i].userIdentifier, shmPointer[i].key, shmPointer[i].timeStamp);
@@ -154,7 +147,6 @@ void child(){
                 // make the key invalid
                 if(shmPointer[i].key != -1){
                     printf("<KeyManager>remove key.. User: %s Key: %d\n", shmPointer[i].userIdentifier, shmPointer[i].key);
-                    fflush(stdout);
                     shmPointer[i].key = -1;
                 }
             }
@@ -224,9 +216,9 @@ int concatenate(int x, int y) {
 }
 
 int hash(struct Request *request){
-    int hash = request->clientPid + ((rand() % 100) * 31); //rand from 0
+    int hash = request->clientPid + ((rand() % 100) * 31);
     int serviceRecognizer = 0;
-    //todo case insensitive
+
     if(strcmp(request->serviceName, "invia") == 0)
         serviceRecognizer = 11;
     else if(strcmp(request->serviceName, "salva") == 0 )
@@ -241,7 +233,6 @@ int hash(struct Request *request){
     int result = concatenate(hash, serviceRecognizer);
 
     return result;
-    //return 555533;
 };
 
 
@@ -250,7 +241,6 @@ void sendResponse(struct Request *request) {
     int key = -1;
 
     printf("<Server> richiesta ricevuta ... service: %s  user :%s \n" , request->serviceName,  request->userIdentifier);
-    fflush(stdout);
 
     semOp(semid, MUTEX, -1);
     // search for a free area or a area that can be rewritten because it's invalid
@@ -261,7 +251,6 @@ void sendResponse(struct Request *request) {
             //area can be written
             memoryIsSaturated = 0;
             printf("<Server>creo una chiave ..\n");
-            fflush(stdout);
 
             //create hash
             key = hash(request);
@@ -293,7 +282,6 @@ void sendResponse(struct Request *request) {
     // Prepare the response for the client
     struct Response response;
     response.key = key;
-
 
     // write the response into the client fifo
     if (write(clientFIFO, &response,sizeof(struct Response))

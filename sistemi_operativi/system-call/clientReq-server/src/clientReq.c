@@ -15,23 +15,23 @@ char pathToClientFIFO [35]; //extended path for the fif
 int serverFIFO, clientFIFO;
 
 void closeFIFOs(){
-    //todo se il server non è attivo, non elimina il file
-    // close the client and server fifo
-    if (close(serverFIFO) != 0 || close(clientFIFO) != 0)
-        errExit("close of server and client fifo -> failed");
-
+    //printf("deleting fifos...\n");
     // remove client fifo from the file system
     if (unlink(pathToClientFIFO) != 0)
         errExit("unlink from the file system -> failed");
+    if(serverFIFO == -1)return; //probably server not running
+    if (close(serverFIFO) != 0 || close(clientFIFO) != 0)
+        errExit("close of server and client fifo -> failed");
 }
 int main (int argc, char *argv[]) {
+    atexit(closeFIFOs);
     printf("Benvenuto in clientReq!\n");
     printf("digita uno fra i sequenti servizi\n\tStampa, Salva e invia\n\n");
 
     char userIdentifier[26];
     printf("Inserisci il nome utente(25 caratteri max): ");
     scanf( "%25s", userIdentifier);
-    
+
     char serviceName[7];
     printf("Inserisci il nome del servizio(6 caratteri max): ");
     scanf("%6s", serviceName);
@@ -76,8 +76,5 @@ int main (int argc, char *argv[]) {
     printf("\ncodice identificativo: %s\n", userIdentifier);
     printf("servizio: %s\n", serviceName);
     printf("chiave rilasciata del server: %d\n", response.key);
-
-    closeFIFOs();
-
 
 }
