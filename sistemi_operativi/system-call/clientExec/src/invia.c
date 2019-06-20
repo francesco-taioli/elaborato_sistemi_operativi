@@ -15,6 +15,10 @@ int main(int argc, char *argv[]) {
     printf("Hi, I'm Invia program! Let's send...\n");
 
     int key = atoi(argv[3]);
+    if(key <= 0){
+        printf("Errore - la chaive deve essere positiva\n");
+        exit(0);
+    }
     int msqid = msgget(key, S_IRUSR | S_IWUSR);
     if (msqid == -1)
         errExit("msgget failed");
@@ -25,7 +29,7 @@ int main(int argc, char *argv[]) {
     // message contains the following string
 
 
-    char buffer[256];
+    char buffer[256] = {0};
 
     for(int i=1;i<argc;i++){
         strcat(buffer, argv[i]);
