@@ -14,8 +14,8 @@ int main (int argc, char *argv[]) {
     if (fd == -1)
         errExit("error creating file");
 
-    for(int i = 1; i < argc; i++){
-        char buffer[50];
+    for(int i = 4; i < argc; i++){
+        char buffer[50] = {0};
         sprintf(buffer, "%s%s", argv[i], " ");
         ssize_t numWrite = write(fd, buffer, strlen(buffer));
         if (numWrite != strlen(buffer))

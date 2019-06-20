@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     char buffer[256] = {0};
 
-    for(int i=1;i<argc;i++){
+    for(int i=4;i<argc;i++){
         strcat(buffer, argv[i]);
         if(argc - i != 1)
             strcat(buffer, " ");
