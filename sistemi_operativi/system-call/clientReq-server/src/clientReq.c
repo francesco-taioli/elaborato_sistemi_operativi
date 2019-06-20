@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "../inc/errExit.h"
 #include "../inc/request_response.h"
@@ -31,10 +32,20 @@ int main (int argc, char *argv[]) {
     char userIdentifier[26];
     printf("Inserisci il nome utente(25 caratteri max): ");
     scanf( "%25s", userIdentifier);
+    int character ;
+    //discarding the extra character
+    while((character = getchar()) != '\n' && character != EOF);
 
     char serviceName[7];
     printf("Inserisci il nome del servizio(6 caratteri max): ");
     scanf("%6s", serviceName);
+    //discarding the extra character
+    while((character = getchar()) != '\n' && character != EOF);
+
+    //get the service tolower
+    for(int i = 0; serviceName[i]; i++)
+        serviceName[i] = tolower(serviceName[i]);
+
 
     // get the extended path for the fifo ( base path + pid )
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, getpid());
