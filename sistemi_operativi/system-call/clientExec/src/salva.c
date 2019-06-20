@@ -16,7 +16,7 @@ int main (int argc, char *argv[]) {
 
     for(int i = 4; i < argc; i++){
         char buffer[50] = {0};
-        sprintf(buffer, "%s%s", argv[i], " ");
+        sprintf(buffer, "%s ", argv[i]);
         ssize_t numWrite = write(fd, buffer, strlen(buffer));
         if (numWrite != strlen(buffer))
             errExit("failed to write to file");

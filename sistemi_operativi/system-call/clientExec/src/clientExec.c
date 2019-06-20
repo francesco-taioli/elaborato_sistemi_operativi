@@ -16,7 +16,7 @@
 #include "../inc/semaphore.h"
 
 
-#define MAX_REQUEST_INTO_MEMORY 21
+#define MAX_REQUEST_INTO_MEMORY 100
 #define MUTEX 0
 
 char *pathKeyFtok = "/tmp/vr422009.tmp";

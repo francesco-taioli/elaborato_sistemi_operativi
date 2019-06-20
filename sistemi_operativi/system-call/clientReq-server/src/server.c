@@ -18,7 +18,7 @@
 #include "../inc/shared_memory.h"
 #include "../inc/semaphore.h"
 
-#define MAX_REQUEST_INTO_MEMORY 21
+#define MAX_REQUEST_INTO_MEMORY 100
 
 #define MINUTES 5
 #define MUTEX 0
