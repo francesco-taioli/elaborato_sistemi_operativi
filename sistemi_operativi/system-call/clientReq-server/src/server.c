@@ -11,6 +11,8 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <sys/wait.h>
+#include <sys/shm.h>
 
 
 #include "../inc/errExit.h"
@@ -40,6 +42,7 @@ int  hash(struct Request *request);
 void sendResponse(struct Request *request);
 int createSemaphoreSet(key_t semkey);
 void createFileForKeyManagement();
+void checkMemoryForDeletion();
 void child();
 
 
@@ -54,6 +57,7 @@ int main (int argc, char *argv[]) {
     sigfillset(&mySet);
     // remove SIGTERM from mySet
     sigdelset(&mySet, SIGTERM);
+    sigdelset(&mySet, SIGALRM);
     // blocking all signals but SIGTERM
     sigprocmask(SIG_SETMASK, &mySet, &prevSet);
 
@@ -107,6 +111,12 @@ int main (int argc, char *argv[]) {
     else if(keyManager > 0)
     {
         ////////// parent  //////////
+        struct shmid_ds buf;
+        shmctl(shmidServer, IPC_STAT, &buf);
+        printf("<Server> Natch %ld\n", buf.shm_nattch);
+
+        //////// fine check shmid_ds
+
         struct Request request;
         ssize_t bR = -1;
         do{
@@ -128,14 +138,9 @@ int main (int argc, char *argv[]) {
     }
 };
 
-
-void child(){
-    if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
-        errExit("keyManager unable to catch signal sigterm");
-
-    while(1){
-        sleep(30);
-
+void checkMemoryForDeletion(){
+	printf("<Keyman> sono in alarm\n");
+	
         semOp(semid, MUTEX, -1);
         printf("<KeyManager> cerco chiavi scadute ...\n");
 
@@ -152,7 +157,20 @@ void child(){
             }
         }
         semOp(semid, MUTEX, 1);
-    }
+    alarm(2);
+    
+    
+};
+void child(){
+    if (signal(SIGTERM, signalHandlerKeyManager) == SIG_ERR)
+        errExit("keyManager unable to catch signal sigterm");
+
+    if(signal(SIGALRM, checkMemoryForDeletion) == SIG_ERR)
+        errExit("keyman unable to handler sigalarm");
+
+    alarm(2); 
+    for(;;)
+   	pause();
 };
 
 
@@ -200,8 +218,13 @@ void closeAndRemoveIPC(){
         // remove the shared memory segment
         printf("<Server> removing the shared memory segment...\n");
         remove_shared_memory(shmidServer);
-        if(childCreated)
+        if(childCreated){
             kill(keyManager, SIGTERM);
+            int status;
+            wait(&status);
+            printf("Child terminated with %i\n", WEXITSTATUS(status));
+        }
+
 
 
     }
@@ -267,7 +290,7 @@ void sendResponse(struct Request *request) {
     shmPointer[index].timeStamp = time(NULL);
     strcpy( shmPointer[index].userIdentifier , request->userIdentifier);
     semOp(semid, MUTEX, 1);
-
+\
     // get the extended path for the fifo ( base path + keyManager )
     char pathToClientFIFO [35];
     sprintf(pathToClientFIFO, "%s%d", basePathToClientFIFO, request->clientPid);

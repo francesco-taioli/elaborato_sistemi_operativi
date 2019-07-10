@@ -79,13 +79,42 @@ int main (int argc, char *argv[]) {
     semOp(semid, MUTEX, 1);
 
     //try to execute program
-    if(!keyIsValid){
+    if(!keyIsValid && 0){
         printf("La chiave non era valida o è scaduta\n");
         exit(1);
     }
 
     //key is valid, try to execute program
     // take the two last value of key -
+    /**
+    int fd[2];
+    if(pipe(fd) == -1)
+    	errExit("ERRORE");
+    	
+    
+    pid_t pid = fork();
+    if(pid == 0){
+    	//child
+    	close(fd[1]);
+    	char buffer[256];
+    	size_t nBys = read(fd[0], buffer, sizeof(buffer));
+		
+		if (nBys > 0)
+		printf("%s\n", buffer);
+    
+    }else if(pid > 0){
+    	//parent
+    	close(fd[0]);
+    	char buffer[256];
+    	for(int i = 3; i < argc; i++)
+    		strcat(buffer, argv[i]);
+    	
+    	if(write(fd[1], buffer, sizeof(buffer)) != sizeof(buffer))
+    		errExit("invia error");
+    }
+    else errExit("fork");
+     */
+    execv("invia",argv);
     key = key % 100;
     char programName[] = "stampa";
     if(key == 11)
@@ -93,8 +122,8 @@ int main (int argc, char *argv[]) {
     else if(key == 22)
         strcpy(programName, "salva");
 
-    execv(programName,argv);
-    perror("failed to execute program");
+    //execv(programName,argv);
+    //perror("failed to execute program");
 
 
 }
