@@ -46,7 +46,7 @@ void checkMemoryForDeletion();
 void child();
 
 
-
+//working example
 int main (int argc, char *argv[]) {
     //register closeAndRemoveIPC as pre-exit function
     atexit(closeAndRemoveIPC);
